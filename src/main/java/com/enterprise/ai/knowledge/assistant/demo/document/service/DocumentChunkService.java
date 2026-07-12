@@ -1,0 +1,86 @@
+package com.enterprise.ai.knowledge.assistant.demo.document.service;
+
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+/**
+ * Service that splits long document text into smaller chunks.
+ *
+ * Strategy implemented: sliding window chunking with configurable chunk size and overlap (in characters).
+ * - chunkSize: maximum characters per chunk
+ * - overlap: number of characters that overlap between consecutive chunks
+ */
+@Service
+public class DocumentChunkService {
+
+	/** Default chunk size in characters. */
+	public static final int DEFAULT_CHUNK_SIZE = 1000;
+
+	/** Default overlap in characters between chunks. */
+	public static final int DEFAULT_OVERLAP = 200;
+
+	/**
+	 * Chunk text using default chunk size and overlap.
+	 */
+	public List<String> chunkText(String text) {
+		return chunkText(text, DEFAULT_CHUNK_SIZE, DEFAULT_OVERLAP);
+	}
+
+	/**
+	 * Chunk text using provided chunk size and overlap.
+	 * Returns an empty list for null/empty input.
+	 */
+	public List<String> chunkText(String text, int chunkSize, int overlap) {
+		if (text == null || text.isEmpty()) {
+			return Collections.emptyList();
+		}
+
+		if (chunkSize <= 0) {
+			throw new IllegalArgumentException("chunkSize must be > 0");
+		}
+
+		// Ensure overlap is non-negative and less than chunkSize to make progress
+		if (overlap < 0) {
+			overlap = 0;
+		}
+		if (overlap >= chunkSize) {
+			overlap = Math.max(0, chunkSize / 10);
+		}
+
+		List<String> chunks = new ArrayList<>();
+		int length = text.length();
+		int start = 0;
+
+		while (start < length) {
+			int end = Math.min(start + chunkSize, length);
+			String chunk = text.substring(start, end);
+			chunks.add(chunk);
+
+			if (end == length) {
+				break;
+			}
+
+			start = end - overlap;
+			if (start < 0) {
+				start = 0;
+			}
+		}
+
+		return chunks;
+	}
+
+	/**
+	 * Returns the number of chunks that would be produced for the given text and parameters.
+	 */
+	public int countChunks(String text, int chunkSize, int overlap) {
+		return chunkText(text, chunkSize, overlap).size();
+	}
+
+	/** Convenience method for counting with defaults. */
+	public int countChunks(String text) {
+		return countChunks(text, DEFAULT_CHUNK_SIZE, DEFAULT_OVERLAP);
+	}
+}
