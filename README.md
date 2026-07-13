@@ -120,8 +120,150 @@ DocumentUploadService --> HTTP POST /documents : 200 OK + metadata
 ```
 
 Next possible enhancements
-- Add an HTTP endpoint to run nearest-neighbor queries and return the top-K matching document chunks.
+- ✅ Add an HTTP endpoint to run nearest-neighbor queries and return the top-K matching document chunks. → **DONE** (`/api/chat/rag`)
 - Add Testcontainers-based integration tests that start Postgres with pgvector to validate insert + nearest-neighbor end-to-end.
 - Add metrics/logging around embedding generation and DB insertion failures so you can monitor best-effort behavior.
 
-If you'd like, I can implement any of the enhancements above (endpoint, tests, monitoring) — tell me which one and I'll add it.
+## RAG (Retrieval-Augmented Generation) Integration ✨
+
+The application now includes a complete RAG pipeline for context-aware AI chat:
+
+### New Endpoints
+
+**RAG-Enhanced Chat** (context-aware)
+```
+GET /api/chat/rag?message=<query>&topK=5
+```
+Returns a `ChatResponse` with answer + citations from retrieved documents.
+
+**Legacy Chat** (simple LLM query)
+```
+GET /api/chat?message=<query>
+```
+Returns a plain string response (no document retrieval).
+
+### RAG Pipeline Components
+
+**Retriever** (`rag/Retriever.java`)
+- Embeds user queries
+- Searches vector store for nearest chunks
+- Returns top-K relevant documents with metadata
+
+**PromptBuilder** (`rag/PromptBuilder.java`)
+- Formats retrieved context
+- Injects context into system/user prompts
+- Ensures consistent prompt structure
+
+**ChatResponse** (`chat/dto/ChatResponse.java`)
+```json
+{
+  "answer": "...",
+  "citations": [
+    {
+      "documentName": "file.pdf",
+      "pageNumber": 2,
+      "chunkIndex": 0,
+      "relevanceScore": 0.95
+    }
+  ],
+  "isFromContext": true,
+  "retrievalCount": 5
+}
+```
+
+### Example: Context-Aware Chat
+
+1. **Upload document:**
+   ```bash
+   curl -X POST http://localhost:8080/api/documents \
+     -F "file=@CompanyPolicies.pdf"
+   ```
+
+2. **Query with context:**
+   ```bash
+   curl "http://localhost:8080/api/chat/rag?message=What%20is%20the%20vacation%20policy"
+   ```
+
+3. **Receive answer with citations:**
+   ```json
+   {
+     "answer": "Based on the company handbook, employees receive 20 days of paid time off annually...",
+     "citations": [
+       {
+         "documentName": "CompanyPolicies.pdf",
+         "pageNumber": 2,
+         "chunkIndex": 0,
+         "relevanceScore": 0.98
+       }
+     ],
+     "isFromContext": true,
+     "retrievalCount": 1
+   }
+   ```
+
+### RAG Benefits
+
+- **Reduced Hallucinations**: LLM answers based on actual documents
+- **Traceability**: Citations show source documents
+- **Customization**: Easy to add domain-specific documents
+- **Transparency**: Relevance scores indicate confidence
+
+### Architecture: Document Upload → RAG Chat
+
+```
+1. Document Upload
+   ↓
+   DocumentUploadService (extract text, chunk, hash)
+   ↓
+   For each chunk:
+     ├─ EmbeddingService (generate embedding)
+     └─ VectorStoreService (store with metadata)
+   
+2. RAG Chat Query
+   ↓
+   ChatController (/api/chat/rag)
+   ├─ Retriever (query embedding + vector search)
+   ├─ PromptBuilder (inject context)
+   ├─ ChatClient (send to LLM)
+   └─ Format response with citations
+```
+
+### Configuration
+
+```properties
+# In application.properties
+
+# LLM Provider
+app.llm.provider=lmstudio
+spring.ai.openai.base-url=http://127.0.0.1:1234
+
+# PostgreSQL
+spring.datasource.url=jdbc:postgresql://localhost:5432/enterprise_ai
+spring.datasource.username=workspace
+spring.datasource.password=password
+```
+
+### Testing RAG Components
+
+Unit tests included:
+- `ChatControllerTest` - RAG endpoint integration
+- `RetrieverTest` - Document retrieval logic
+- `PromptBuilderTest` - Prompt construction
+
+Run tests:
+```bash
+mvn test
+```
+
+### See Also
+
+- `RAG_INTEGRATION.md` - Detailed integration guide
+- `RAG_INTEGRATION_SUMMARY.md` - Architecture overview
+- `TODO.md` - Roadmap and remaining tasks
+
+If you'd like, I can implement the following enhancements:
+- Testcontainers-based integration tests
+- Database migrations (Flyway/Liquibase)
+- Alternative vector store providers (Pinecone, Qdrant)
+- Conversation memory for multi-turn RAG
+

@@ -1,11 +1,10 @@
 package com.enterprise.ai.knowledge.assistant.demo;
 
-import com.enterprise.ai.knowledge.assistant.demo.embedding.EmbeddingService;
+import com.enterprise.ai.knowledge.assistant.demo.embedding.dto.EmbeddingResult;
+import com.enterprise.ai.knowledge.assistant.demo.embedding.service.EmbeddingService;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Disabled;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Arrays;
 
@@ -24,10 +23,10 @@ class DemoApplicationTests {
 	void testDummy() {
 		String text = "Employees receive 20 days of paid time off.";
 
-		float[] embedding = embeddingService.generateEmbedding(text);
-
-		System.out.println("Vector size : " + embedding.length);
-		System.out.println(Arrays.toString(Arrays.copyOf(embedding, 10)));
+		EmbeddingResult embedding = embeddingService.generateEmbedding(text);
+		float[] vector = embedding.vector();
+		System.out.println("Vector size : " + (vector == null ? 0 : vector.length));
+		System.out.println(Arrays.toString(Arrays.copyOf(vector, Math.min(10, vector == null ? 0 : vector.length))));
 	}
 
 }

@@ -1,5 +1,6 @@
 package com.enterprise.ai.knowledge.assistant.demo.document.service;
 
+import com.enterprise.ai.knowledge.assistant.demo.embedding.dto.EmbeddingResult;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -14,8 +15,13 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import com.enterprise.ai.knowledge.assistant.demo.document.dto.DocumentUploadResponse;
 import java.util.List;
-import com.enterprise.ai.knowledge.assistant.demo.embedding.EmbeddingService;
-import com.enterprise.ai.knowledge.assistant.demo.embedding.PostgresService;
+import com.enterprise.ai.knowledge.assistant.demo.embedding.service.EmbeddingService;
+import com.enterprise.ai.knowledge.assistant.demo.vector.entity.ChunkEntity;
+import com.enterprise.ai.knowledge.assistant.demo.vector.service.VectorStoreService;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
+import java.util.UUID;
 
 /**
  * Service responsible for handling document persistence (local filesystem in this skeleton).
@@ -25,14 +31,29 @@ public class DocumentUploadService {
 
 	private final DocumentChunkService chunkService;
 	private final EmbeddingService embeddingService;
-	private final PostgresService postgresService;
+	private final VectorStoreService vectorStoreService;
 
 	public DocumentUploadService(DocumentChunkService chunkService,
 								 EmbeddingService embeddingService,
-								 PostgresService postgresService) {
+								 VectorStoreService vectorStoreService) {
 		this.chunkService = chunkService;
 		this.embeddingService = embeddingService;
-		this.postgresService = postgresService;
+		this.vectorStoreService = vectorStoreService;
+	}
+
+	private static String sha256Hex(String input) {
+		try {
+			MessageDigest md = MessageDigest.getInstance("SHA-256");
+			byte[] digest = md.digest(input.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+			StringBuilder sb = new StringBuilder();
+			for (byte b : digest) {
+				sb.append(String.format("%02x", b));
+			}
+			return sb.toString();
+		} catch (NoSuchAlgorithmException e) {
+			// SHA-256 always available in JVM; fallback to plain hashCode string
+			return Integer.toHexString(input.hashCode());
+		}
 	}
 
 	private static final Path DEFAULT_UPLOAD_DIR = Paths.get(System.getProperty("java.io.tmpdir"), "enterprise-ai-uploads");
@@ -78,11 +99,20 @@ public class DocumentUploadService {
 			List<String> chunkList = chunkService.chunkText(text, CHUNK_SIZE, DocumentChunkService.DEFAULT_OVERLAP);
 			int chunks = chunkList.size();
 
-			// generate embeddings for each chunk and insert into Postgres/vector DB
+			// generate embeddings for each chunk and insert into vector store
+			int idx = 0;
 			for (String chunk : chunkList) {
 				try {
-					float[] embedding = embeddingService.generateEmbedding(chunk);
-					postgresService.insertEmbedding(chunk, embedding);
+					EmbeddingResult embedding = embeddingService.generateEmbedding(chunk);
+					if (embedding == null || embedding.vector() == null) continue;
+					String hash = sha256Hex(chunk);
+					if (vectorStoreService.existsByHash(hash)) {
+						idx++;
+						continue; // skip duplicates
+					}
+					ChunkEntity entity = new ChunkEntity(UUID.randomUUID(), originalFilename, 1, idx, chunk, embedding.vector(), Instant.now(), hash);
+					vectorStoreService.storeChunk(entity);
+					idx++;
 				} catch (Exception ex) {
 					// best-effort: continue on errors
 				}
@@ -108,10 +138,16 @@ public class DocumentUploadService {
 				List<String> chunkList = chunkService.chunkText(text, CHUNK_SIZE, DocumentChunkService.DEFAULT_OVERLAP);
 				int chunks = chunkList.size();
 
+				int idx = 0;
 				for (String chunk : chunkList) {
 					try {
-						float[] embedding = embeddingService.generateEmbedding(chunk);
-						postgresService.insertEmbedding(chunk, embedding);
+						EmbeddingResult embedding = embeddingService.generateEmbedding(chunk);
+						if (embedding == null || embedding.vector() == null) continue;
+						String hash = sha256Hex(chunk);
+						if (vectorStoreService.existsByHash(hash)) { idx++; continue; }
+						ChunkEntity entity = new ChunkEntity(UUID.randomUUID(), originalFilename, pages, idx, chunk, embedding.vector(), Instant.now(), hash);
+						vectorStoreService.storeChunk(entity);
+						idx++;
 					} catch (Exception ex) {
 						// continue on error
 					}
@@ -136,10 +172,16 @@ public class DocumentUploadService {
 			List<String> chunkList = chunkService.chunkText(text, CHUNK_SIZE, DocumentChunkService.DEFAULT_OVERLAP);
 			int chunks = chunkList.size();
 
+			int idx = 0;
 			for (String chunk : chunkList) {
 				try {
-					float[] embedding = embeddingService.generateEmbedding(chunk);
-					postgresService.insertEmbedding(chunk, embedding);
+					EmbeddingResult embedding = embeddingService.generateEmbedding(chunk);
+					if (embedding == null || embedding.vector() == null) continue;
+					String hash = sha256Hex(chunk);
+					if (vectorStoreService.existsByHash(hash)) { idx++; continue; }
+					ChunkEntity entity = new ChunkEntity(UUID.randomUUID(), originalFilename, 1, idx, chunk, embedding.vector(), Instant.now(), hash);
+					vectorStoreService.storeChunk(entity);
+					idx++;
 				} catch (Exception ex) {
 					// continue on error
 				}
