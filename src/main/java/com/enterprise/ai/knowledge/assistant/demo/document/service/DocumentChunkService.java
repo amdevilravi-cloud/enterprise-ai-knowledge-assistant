@@ -1,10 +1,15 @@
 package com.enterprise.ai.knowledge.assistant.demo.document.service;
 
+import com.enterprise.ai.knowledge.assistant.demo.document.dto.PdfChunk;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Service that splits long document text into smaller chunks.
@@ -82,5 +87,54 @@ public class DocumentChunkService {
 	/** Convenience method for counting with defaults. */
 	public int countChunks(String text) {
 		return countChunks(text, DEFAULT_CHUNK_SIZE, DEFAULT_OVERLAP);
+	}
+
+	public List<PdfChunk> chunkPDFText(
+			PDDocument pdf,
+			int chunkSize,
+			int defaultOverlap) throws IOException {
+
+		List<PdfChunk> chunks = new ArrayList<>();
+
+		PDFTextStripper stripper = new PDFTextStripper();
+
+		int chunkIndex = 0;
+
+		for (int page = 1; page <= pdf.getNumberOfPages(); page++) {
+
+			stripper.setStartPage(page);
+			stripper.setEndPage(page);
+
+			String text = stripper.getText(pdf);
+
+			if (text == null || text.isBlank()) {
+				continue;
+			}
+
+			text = text.replaceAll("\\s+", " ").trim();
+
+			int start = 0;
+
+			while (start < text.length()) {
+
+				int end = Math.min(start + chunkSize, text.length());
+
+				String chunk = text.substring(start, end).trim();
+
+				chunks.add(new PdfChunk(
+						page,
+						chunkIndex++,
+						chunk
+				));
+
+				if (end == text.length()) {
+					break;
+				}
+
+				start = end - defaultOverlap;
+			}
+		}
+
+		return chunks;
 	}
 }

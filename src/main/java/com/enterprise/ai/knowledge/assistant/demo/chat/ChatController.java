@@ -80,6 +80,9 @@ public class ChatController {
             // Step 2: Build RAG prompt with context
             String ragPrompt = promptBuilder.buildRagPrompt(message, results);
 
+
+            System.out.println(promptBuilder.getSystemPrompt());
+            System.out.println(ragPrompt);
             // Step 3: Send augmented prompt to LLM
             String answer = chatClient.prompt()
                     .system(promptBuilder.getSystemPrompt())

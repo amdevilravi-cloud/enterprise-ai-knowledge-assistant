@@ -13,19 +13,45 @@ import java.util.List;
 public class PromptBuilder {
 
     private static final String DEFAULT_SYSTEM_PROMPT = """
-            You are an enterprise AI knowledge assistant. Answer questions based on the provided context.
-            If the context doesn't contain relevant information, acknowledge this and provide a helpful response based on your knowledge.
-            Always cite the source documents when referencing specific information from the context.
-            """;
+            You are an Enterprise AI Knowledge Assistant.
+            
+            Answer ONLY using the retrieved context.
+            
+            If the answer cannot be found in the context, reply exactly:
+            
+            "I could not find the answer in the uploaded documents."
+            
+            Do not use your own knowledge.
+            Do not make assumptions.
+            Never fabricate information.
+            Always cite supporting documents """;
 
     private static final String CONTEXT_TEMPLATE = """
-            Based on the following retrieved documents, please answer the user's question:
+            SYSTEM
             
-            ==== RETRIEVED CONTEXT ====
+            You are an Enterprise AI Knowledge Assistant.
+            
+            Rules:
+            - Answer ONLY using the retrieved context.
+            - If the retrieved context contains enough information, answer clearly.
+            - If the answer is not present in the context, reply:
+              "I could not find the answer in the uploaded documents."
+            - Never use outside knowledge.
+            - Never fabricate information.
+            - Cite the document and page number when possible.
+            
+            --------------------
+            CONTEXT
+            
             %s
-            ==== END CONTEXT ====
             
-            User Question: %s
+            --------------------
+            QUESTION
+            
+            %s
+            
+            --------------------
+            ANSWER
             """;
 
     /**
@@ -57,13 +83,32 @@ public class PromptBuilder {
         StringBuilder contextBuilder = new StringBuilder();
         for (int i = 0; i < results.size(); i++) {
             SearchResult result = results.get(i);
-            contextBuilder.append(String.format("[Document %d] %s", i + 1, result.getDocumentName()));
-            if (result.getPageNumber() != null) {
-                contextBuilder.append(String.format(" (Page %d)", result.getPageNumber()));
-            }
-            contextBuilder.append("\n");
-            contextBuilder.append(result.getContent()).append("\n");
-            contextBuilder.append("---\n");
+//            contextBuilder.append(String.format("[Document %d] %s", i + 1, result.getDocumentName()));
+//            if (result.getPageNumber() != null) {
+//                contextBuilder.append(String.format(" (Page %d)", result.getPageNumber()));
+//            }
+//            contextBuilder.append("\n");
+//            contextBuilder.append(result.getContent()).append("\n");
+//            contextBuilder.append("---\n");
+            contextBuilder.append("""
+                    ====================================
+                    Document : %s
+                    Page     : %d
+                    Chunk    : %d
+                    Score    : %.3f
+                    
+                    Content:
+                    %s
+                    
+                    ====================================
+                    
+                    """.formatted(
+                    result.getDocumentName(),
+                    result.getPageNumber(),
+                    result.getChunkIndex(),
+                    result.getScore(),
+                    result.getContent()
+            ));
         }
 
         return buildRagPrompt(userQuery, contextBuilder.toString());

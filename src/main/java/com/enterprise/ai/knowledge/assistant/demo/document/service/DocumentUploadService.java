@@ -1,5 +1,6 @@
 package com.enterprise.ai.knowledge.assistant.demo.document.service;
 
+import com.enterprise.ai.knowledge.assistant.demo.document.dto.PdfChunk;
 import com.enterprise.ai.knowledge.assistant.demo.embedding.dto.EmbeddingResult;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,6 +22,7 @@ import com.enterprise.ai.knowledge.assistant.demo.vector.service.VectorStoreServ
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -133,19 +135,22 @@ public class DocumentUploadService {
 			try (PDDocument pdf = PDDocument.load(destination.toFile())) {
 				PDFTextStripper stripper = new PDFTextStripper();
 				String text = stripper.getText(pdf);
+				//TODO
 				int pages = pdf.getNumberOfPages();
 				int characters = text.length();
-				List<String> chunkList = chunkService.chunkText(text, CHUNK_SIZE, DocumentChunkService.DEFAULT_OVERLAP);
+				//List<String> chunkList = chunkService.chunkText(text, CHUNK_SIZE, DocumentChunkService.DEFAULT_OVERLAP);
+				List<PdfChunk> chunkList = chunkService.chunkPDFText(pdf, CHUNK_SIZE, DocumentChunkService.DEFAULT_OVERLAP);
 				int chunks = chunkList.size();
 
 				int idx = 0;
-				for (String chunk : chunkList) {
+				for (PdfChunk pdfChunk : chunkList) {
 					try {
-						EmbeddingResult embedding = embeddingService.generateEmbedding(chunk);
+						EmbeddingResult embedding = embeddingService.generateEmbedding(pdfChunk.text());
 						if (embedding == null || embedding.vector() == null) continue;
-						String hash = sha256Hex(chunk);
+						String hash = sha256Hex(pdfChunk.text());
 						if (vectorStoreService.existsByHash(hash)) { idx++; continue; }
-						ChunkEntity entity = new ChunkEntity(UUID.randomUUID(), originalFilename, pages, idx, chunk, embedding.vector(), Instant.now(), hash);
+						ChunkEntity entity = new ChunkEntity(UUID.randomUUID(), originalFilename, pdfChunk.pageNumber(), idx, pdfChunk.text(), embedding.vector(), Instant.now(), hash);
+
 						vectorStoreService.storeChunk(entity);
 						idx++;
 					} catch (Exception ex) {
@@ -159,7 +164,7 @@ public class DocumentUploadService {
 						.characters(characters)
 						.chunks(chunks)
 						.text("")
-						.chunkContents(chunkList)
+						.chunkContents(java.util.Collections.emptyList())
 						.isUploadSuccess(true)
 						.build();
 			}
