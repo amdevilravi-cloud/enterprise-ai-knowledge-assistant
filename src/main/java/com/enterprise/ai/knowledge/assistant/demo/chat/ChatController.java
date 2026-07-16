@@ -3,6 +3,7 @@ package com.enterprise.ai.knowledge.assistant.demo.chat;
 import com.enterprise.ai.knowledge.assistant.demo.chat.dto.ChatResponse;
 import com.enterprise.ai.knowledge.assistant.demo.rag.PromptBuilder;
 import com.enterprise.ai.knowledge.assistant.demo.rag.Retriever;
+import com.enterprise.ai.knowledge.assistant.demo.rag.dto.RagPrompt;
 import com.enterprise.ai.knowledge.assistant.demo.repository.SearchResult;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -62,7 +63,7 @@ public class ChatController {
      * RAG-enhanced chat endpoint that retrieves context before sending to the LLM.
      *
      * Process:
-     * 1. Retrieve top-5 relevant document chunks based on the query
+     * 1. Two-stage retrieval: vector search (top 20) → filter → re-rank → top 3
      * 2. Build a prompt with the retrieved context injected
      * 3. Send the augmented prompt to the LLM
      * 4. Return the response with citations to source documents
@@ -80,16 +81,16 @@ public class ChatController {
             // Step 1-4: Two-stage retrieval + re-ranking
             List<SearchResult> results = retriever.retrieveAndRerank(message, vectorTopK, finalTopN);
 
-            // Step 2: Build RAG prompt with context
-            String ragPrompt = promptBuilder.buildRagPrompt(message, results);
+            // Step 2: Build RAG prompt with context (returns first-class RagPrompt object)
+            RagPrompt ragPrompt = promptBuilder.buildRagPrompt(message, results);
 
+            // Log metadata for observability
+            System.out.println("RAG Prompt Metadata: " + ragPrompt.metadata());
 
-            System.out.println(promptBuilder.getSystemPrompt());
-            System.out.println(ragPrompt);
             // Step 3: Send augmented prompt to LLM
             String answer = chatClient.prompt()
-                    .system(promptBuilder.getSystemPrompt())
-                    .user(ragPrompt)
+                    .system(ragPrompt.systemPrompt())
+                    .user(ragPrompt.userPrompt())
                     .call()
                     .content();
 
@@ -113,15 +114,5 @@ public class ChatController {
                     .content();
             return new ChatResponse(answer, List.of(), false, 0);
         }
-    }
-
-    private String createExcerpt(String content){
-
-        if (content.length() <= 40) {
-            return content;
-        } else {
-            return content.substring(0, 40) + "...";
-        }
-
     }
 }

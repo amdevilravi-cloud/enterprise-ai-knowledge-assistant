@@ -1,7 +1,6 @@
 package com.enterprise.ai.knowledge.assistant.demo.document.service;
 
-import com.enterprise.ai.knowledge.assistant.demo.document.dto.PdfChunk;
-import com.enterprise.ai.knowledge.assistant.demo.embedding.dto.EmbeddingResult;
+import com.enterprise.ai.knowledge.assistant.demo.document.dto.DocumentUploadResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -10,52 +9,18 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.nio.charset.StandardCharsets;
-
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.text.PDFTextStripper;
-import com.enterprise.ai.knowledge.assistant.demo.document.dto.DocumentUploadResponse;
-import java.util.List;
-import com.enterprise.ai.knowledge.assistant.demo.embedding.service.EmbeddingService;
-import com.enterprise.ai.knowledge.assistant.demo.vector.entity.ChunkEntity;
-import com.enterprise.ai.knowledge.assistant.demo.vector.service.VectorStoreService;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.time.Instant;
-import java.util.Map;
-import java.util.UUID;
+import java.util.Collections;
 
 /**
- * Service responsible for handling document persistence (local filesystem in this skeleton).
+ * Service responsible for saving uploaded files and delegating ingestion.
  */
 @Service
 public class DocumentUploadService {
 
-	private final DocumentChunkService chunkService;
-	private final EmbeddingService embeddingService;
-	private final VectorStoreService vectorStoreService;
+	private final DocumentIngestionOrchestrator ingestionOrchestrator;
 
-	public DocumentUploadService(DocumentChunkService chunkService,
-								 EmbeddingService embeddingService,
-								 VectorStoreService vectorStoreService) {
-		this.chunkService = chunkService;
-		this.embeddingService = embeddingService;
-		this.vectorStoreService = vectorStoreService;
-	}
-
-	private static String sha256Hex(String input) {
-		try {
-			MessageDigest md = MessageDigest.getInstance("SHA-256");
-			byte[] digest = md.digest(input.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-			StringBuilder sb = new StringBuilder();
-			for (byte b : digest) {
-				sb.append(String.format("%02x", b));
-			}
-			return sb.toString();
-		} catch (NoSuchAlgorithmException e) {
-			// SHA-256 always available in JVM; fallback to plain hashCode string
-			return Integer.toHexString(input.hashCode());
-		}
+	public DocumentUploadService(DocumentIngestionOrchestrator ingestionOrchestrator) {
+		this.ingestionOrchestrator = ingestionOrchestrator;
 	}
 
 	private static final Path DEFAULT_UPLOAD_DIR = Paths.get(System.getProperty("java.io.tmpdir"), "enterprise-ai-uploads");
@@ -64,155 +29,43 @@ public class DocumentUploadService {
 		try {
 			Files.createDirectories(DEFAULT_UPLOAD_DIR);
 		} catch (IOException e) {
-			// Intentionally silent for skeleton; in real app log properly.
+			// Intentionally silent for skeleton
 		}
 	}
 
 	/**
-	 * Save the uploaded MultipartFile to the default upload directory.
-	 * Returns a map with file metadata on success.
+	 * Save the uploaded MultipartFile and ingest it.
 	 */
 	public DocumentUploadResponse save(MultipartFile file) throws IOException {
 		if (file == null || file.isEmpty()) {
-			return DocumentUploadResponse.builder()
-					.documentName(file == null ? null : file.getOriginalFilename())
-					.pages(0)
-					.characters(0)
-					.chunks(0)
-					.text("")
-					.chunkContents(java.util.Collections.emptyList())
-					.isUploadSuccess(false)
-					.build();
+			DocumentUploadResponse response = new DocumentUploadResponse();
+			response.setDocumentName(file == null ? null : file.getOriginalFilename());
+			response.setPages(0);
+			response.setCharacters(0);
+			response.setChunks(0);
+			response.setText("");
+			response.setUploadSuccess(false);
+			response.setChunkContents(Collections.emptyList());
+			return response;
 		}
 
 		String originalFilename = file.getOriginalFilename();
 		Path destination = DEFAULT_UPLOAD_DIR.resolve(System.currentTimeMillis() + "-" + (originalFilename == null ? "upload" : originalFilename));
-
 		Files.copy(file.getInputStream(), destination, StandardCopyOption.REPLACE_EXISTING);
-		// Attempt to extract text and page count for supported types
-		String lower = originalFilename == null ? "" : originalFilename.toLowerCase();
 
-		final int CHUNK_SIZE = 1000; // simple chunking heuristic
-
-		if (lower.endsWith(".txt")) {
-			String text = Files.readString(destination, StandardCharsets.UTF_8);
-			int characters = text.length();
-			int pages = 1; // plain text - treat as single 'page'
-			List<String> chunkList = chunkService.chunkText(text, CHUNK_SIZE, DocumentChunkService.DEFAULT_OVERLAP);
-			int chunks = chunkList.size();
-
-			// generate embeddings for each chunk and insert into vector store
-			int idx = 0;
-			for (String chunk : chunkList) {
-				try {
-					EmbeddingResult embedding = embeddingService.generateEmbedding(chunk);
-					if (embedding == null || embedding.vector() == null) continue;
-					String hash = sha256Hex(chunk);
-					if (vectorStoreService.existsByHash(hash)) {
-						idx++;
-						continue; // skip duplicates
-					}
-					ChunkEntity entity = new ChunkEntity(UUID.randomUUID(), originalFilename, 1, idx, chunk, embedding.vector(), Instant.now(), hash);
-					vectorStoreService.storeChunk(entity);
-					idx++;
-				} catch (Exception ex) {
-					// best-effort: continue on errors
-				}
-			}
-
-			return DocumentUploadResponse.builder()
-					.documentName(originalFilename)
-					.pages(pages)
-					.characters(characters)
-					.chunks(chunks)
-					.text("")
-					.chunkContents(chunkList)
-					.isUploadSuccess(true)
-					.build();
-		}
-
-		if (lower.endsWith(".pdf")) {
-			try (PDDocument pdf = PDDocument.load(destination.toFile())) {
-				PDFTextStripper stripper = new PDFTextStripper();
-				String text = stripper.getText(pdf);
-				//TODO
-				int pages = pdf.getNumberOfPages();
-				int characters = text.length();
-				//List<String> chunkList = chunkService.chunkText(text, CHUNK_SIZE, DocumentChunkService.DEFAULT_OVERLAP);
-				List<PdfChunk> chunkList = chunkService.chunkPDFText(pdf, CHUNK_SIZE, DocumentChunkService.DEFAULT_OVERLAP);
-				int chunks = chunkList.size();
-
-				int idx = 0;
-				for (PdfChunk pdfChunk : chunkList) {
-					try {
-						EmbeddingResult embedding = embeddingService.generateEmbedding(pdfChunk.text());
-						if (embedding == null || embedding.vector() == null) continue;
-						String hash = sha256Hex(pdfChunk.text());
-						if (vectorStoreService.existsByHash(hash)) { idx++; continue; }
-						ChunkEntity entity = new ChunkEntity(UUID.randomUUID(), originalFilename, pdfChunk.pageNumber(), idx, pdfChunk.text(), embedding.vector(), Instant.now(), hash);
-
-						vectorStoreService.storeChunk(entity);
-						idx++;
-					} catch (Exception ex) {
-						// continue on error
-					}
-				}
-
-				return DocumentUploadResponse.builder()
-						.documentName(originalFilename)
-						.pages(pages)
-						.characters(characters)
-						.chunks(chunks)
-						.text("")
-						.chunkContents(java.util.Collections.emptyList())
-						.isUploadSuccess(true)
-						.build();
-			}
-		}
-
-		// Fallback: try to read as UTF-8 text; if fails, return minimal metadata in the DTO
 		try {
-			String text = Files.readString(destination, StandardCharsets.UTF_8);
-			int characters = text.length();
-			List<String> chunkList = chunkService.chunkText(text, CHUNK_SIZE, DocumentChunkService.DEFAULT_OVERLAP);
-			int chunks = chunkList.size();
-
-			int idx = 0;
-			for (String chunk : chunkList) {
-				try {
-					EmbeddingResult embedding = embeddingService.generateEmbedding(chunk);
-					if (embedding == null || embedding.vector() == null) continue;
-					String hash = sha256Hex(chunk);
-					if (vectorStoreService.existsByHash(hash)) { idx++; continue; }
-					ChunkEntity entity = new ChunkEntity(UUID.randomUUID(), originalFilename, 1, idx, chunk, embedding.vector(), Instant.now(), hash);
-					vectorStoreService.storeChunk(entity);
-					idx++;
-				} catch (Exception ex) {
-					// continue on error
-				}
-			}
-
-			return DocumentUploadResponse.builder()
-					.documentName(originalFilename)
-					.pages(1)
-					.characters(characters)
-					.chunks(chunks)
-					.text("")
-					.chunkContents(chunkList)
-					.isUploadSuccess(true)
-					.build();
-		} catch (IOException ex) {
-			// Non-text/binary file - return basic metadata in DTO (text empty)
-			return DocumentUploadResponse.builder()
-					.documentName(destination.getFileName().toString())
-					.pages(0)
-					.characters(0)
-					.chunks(0)
-					.text("")
-					.chunkContents(java.util.Collections.emptyList())
-					.isUploadSuccess(false)
-					.build();
+			return ingestionOrchestrator.ingest(destination, originalFilename == null ? destination.getFileName().toString() : originalFilename);
+		} catch (IllegalArgumentException ex) {
+			// Unsupported type - return minimal response
+			DocumentUploadResponse response = new DocumentUploadResponse();
+			response.setDocumentName(destination.getFileName().toString());
+			response.setPages(0);
+			response.setCharacters(0);
+			response.setChunks(0);
+			response.setText("");
+			response.setUploadSuccess(false);
+			response.setChunkContents(Collections.emptyList());
+			return response;
 		}
 	}
-
 }

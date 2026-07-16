@@ -31,10 +31,16 @@ public class RetrieverTest {
     @Mock
     private VectorStoreService vectorStoreService;
 
+    @Mock
+    private MetaDataFilter metaDataFilter;
+
+    @Mock
+    private ReRanker reRanker;
+
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        retriever = new Retriever(embeddingService, vectorStoreService);
+        retriever = new Retriever(embeddingService, vectorStoreService, metaDataFilter, reRanker, 20, 3);
     }
 
     /**
@@ -218,4 +224,3 @@ public class RetrieverTest {
         assertEquals(0, results.size());
     }
 }
-

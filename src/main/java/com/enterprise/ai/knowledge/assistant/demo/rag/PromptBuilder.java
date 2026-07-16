@@ -1,130 +1,73 @@
 package com.enterprise.ai.knowledge.assistant.demo.rag;
 
+import com.enterprise.ai.knowledge.assistant.demo.rag.dto.RagPrompt;
+import com.enterprise.ai.knowledge.assistant.demo.rag.template.PromptTemplate;
 import com.enterprise.ai.knowledge.assistant.demo.repository.SearchResult;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * PromptBuilder component for RAG pipeline.
- * Responsible for building the final prompt sent to the LLM by injecting retrieved context.
+ * Responsible for building first-class RagPrompt objects by injecting retrieved context.
  */
 @Component
 public class PromptBuilder {
 
-    private static final String DEFAULT_SYSTEM_PROMPT = """
-              SYSTEM
-            
-            You are an Enterprise AI Knowledge Assistant.
-            
-       
-            
-            Rules:
-            
-            1. Answer ONLY using the retrieved context.
-            2. Never infer missing information.
-            3. If the retrieved context contains placeholders,
-               unresolved values, optional text, or alternatives
-               such as:
-                  [can/cannot]
-                  [Company Name]
-                  [TBD]
-                  [Optional]
-                  
-                  quote it exactly.
-            
-         
-            
-            4. When the source contains ambiguous wording,
-               quote it exactly.
-            
-            5. Do not rewrite ambiguous statements.
-            
-            6. Never fabricate information.
-            
-            7. Cite the supporting document and page.
-            
-             """;
+    private final PromptTemplate defaultTemplate;
 
-    private static final String CONTEXT_TEMPLATE = """
-            
-            
-            --------------------
-            CONTEXT
-            
-            %s
-            
-            --------------------
-            QUESTION
-            
-            %s
-            
-            --------------------
-            ANSWER
-            
-           
-            """;
-
-    /**
-     * Build a RAG prompt by injecting retrieved context.
-     *
-     * @param userQuery The original user query
-     * @param context   Formatted context from retrieved chunks
-     * @return The final prompt to send to the LLM
-     */
-    public String buildRagPrompt(String userQuery, String context) {
-        if (context == null || context.isEmpty()) {
-            return userQuery;
-        }
-        return String.format(CONTEXT_TEMPLATE, context, userQuery);
+    public PromptBuilder(PromptTemplate defaultTemplate) {
+        this.defaultTemplate = defaultTemplate;
     }
 
     /**
-     * Build a RAG prompt with results (combines retrieval results into context).
-     *
-     * @param userQuery The original user query
-     * @param results   List of SearchResult from retrieval
-     * @return The final prompt to send to the LLM
+     * Build a RagPrompt from a query and search results using the default template.
      */
-    public String buildRagPrompt(String userQuery, List<SearchResult> results) {
-        if (results == null || results.isEmpty()) {
-            return userQuery;
-        }
-
-        StringBuilder contextBuilder = new StringBuilder();
-        for (int i = 0; i < results.size(); i++) {
-            SearchResult result = results.get(i);
-            contextBuilder.append("""
-                    ====================================
-                    Document : %s
-                    Page     : %d
-                    Chunk    : %d
-                    Score    : %.3f
-                    
-                    Content:
-                    %s
-                    
-                    ====================================
-                    
-                    """.formatted(
-                    result.getDocumentName(),
-                    result.getPageNumber(),
-                    result.getChunkIndex(),
-                    result.getScore(),
-                    result.getContent()
-            ));
-        }
-
-        return buildRagPrompt(userQuery, contextBuilder.toString());
+    public RagPrompt buildRagPrompt(String query, List<SearchResult> results) {
+        return buildRagPrompt(query, results, defaultTemplate);
     }
 
     /**
-     * Get the default system prompt for the LLM.
-     *
-     * @return System prompt
+     * Build a RagPrompt from a query and search results using a specified template.
+     */
+    public RagPrompt buildRagPrompt(String query, List<SearchResult> results, PromptTemplate template) {
+        if (template == null) {
+            template = defaultTemplate;
+        }
+
+        String system = template.renderSystem(results);
+        String user = template.renderUser(query, results);
+
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("templateName", template.getName());
+        metadata.put("sourceCount", results == null ? 0 : results.size());
+        if (results != null && !results.isEmpty()) {
+            double avgScore = results.stream()
+                    .mapToDouble(SearchResult::getScore)
+                    .average()
+                    .orElse(0.0);
+            metadata.put("averageRelevanceScore", avgScore);
+        }
+
+        return new RagPrompt(system, user, results, metadata);
+    }
+
+    /**
+     * Legacy method for backward compatibility - returns just the user prompt string.
+     * Consider migrating to buildRagPrompt() which returns RagPrompt object.
+     */
+    @Deprecated(forRemoval = true)
+    public String buildRagPromptLegacy(String query, List<SearchResult> results) {
+        RagPrompt prompt = buildRagPrompt(query, results);
+        return prompt.userPrompt();
+    }
+
+    /**
+     * Get the system prompt from the default template.
      */
     public String getSystemPrompt() {
-        return DEFAULT_SYSTEM_PROMPT;
+        return defaultTemplate.renderSystem(null);
     }
 }
-

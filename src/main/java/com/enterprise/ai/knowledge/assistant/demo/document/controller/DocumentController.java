@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Collections;
 
 import com.enterprise.ai.knowledge.assistant.demo.document.service.DocumentUploadService;
 
@@ -33,32 +34,43 @@ public class DocumentController {
 	 */
 	@PostMapping(path = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<DocumentUploadResponse> uploadDocument(@RequestParam("file") MultipartFile file) {
-							DocumentUploadResponse response = new DocumentUploadResponse();
-							response.setDocumentName(file == null ? null : file.getOriginalFilename());
+		if (file == null || file.isEmpty()) {
+			DocumentUploadResponse response = new DocumentUploadResponse();
+			response.setDocumentName(file == null ? null : file.getOriginalFilename());
+			response.setPages(0);
+			response.setCharacters(0);
+			response.setChunks(0);
+			response.setText("");
+			response.setUploadSuccess(false);
+			response.setChunkContents(Collections.emptyList());
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+		}
 
-							if (file == null || file.isEmpty()) {
-								return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-							}
-
-							try {
-								DocumentUploadResponse saved = documentUploadService.save(file);
-								if (saved == null) {
-									// unexpected null - treat as server error
-									response.setText("");
-									response.setPages(0);
-									response.setCharacters(0);
-									response.setChunks(0);
-									return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-								}
-								return ResponseEntity.ok(saved);
-							} catch (IOException e) {
-								// include error message in the text field of the DTO so caller has context
-								response.setText("Failed to save file: " + e.getMessage());
-								response.setPages(0);
-								response.setCharacters(0);
-								response.setChunks(0);
-								return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-							}
+		try {
+			DocumentUploadResponse saved = documentUploadService.save(file);
+			if (saved == null) {
+				DocumentUploadResponse errResponse = new DocumentUploadResponse();
+				errResponse.setDocumentName(file.getOriginalFilename());
+				errResponse.setPages(0);
+				errResponse.setCharacters(0);
+				errResponse.setChunks(0);
+				errResponse.setText("");
+				errResponse.setUploadSuccess(false);
+				errResponse.setChunkContents(Collections.emptyList());
+				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errResponse);
+			}
+			return ResponseEntity.ok(saved);
+		} catch (IOException e) {
+			DocumentUploadResponse errResponse = new DocumentUploadResponse();
+			errResponse.setDocumentName(file.getOriginalFilename());
+			errResponse.setPages(0);
+			errResponse.setCharacters(0);
+			errResponse.setChunks(0);
+			errResponse.setText("Failed to save file: " + e.getMessage());
+			errResponse.setUploadSuccess(false);
+			errResponse.setChunkContents(Collections.emptyList());
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errResponse);
+		}
 	}
 
 }
