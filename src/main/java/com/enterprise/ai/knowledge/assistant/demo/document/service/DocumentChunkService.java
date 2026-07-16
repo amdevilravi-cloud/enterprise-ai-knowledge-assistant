@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * Service that splits long document text into smaller chunks.
@@ -112,6 +113,8 @@ public class DocumentChunkService {
 			}
 
 			text = text.replaceAll("\\s+", " ").trim();
+
+			Pattern pattern = Pattern.compile("\\[[^\\]]+\\]");
 
 			int start = 0;
 

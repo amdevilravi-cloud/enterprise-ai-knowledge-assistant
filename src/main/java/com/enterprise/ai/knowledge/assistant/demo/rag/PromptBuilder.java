@@ -13,32 +13,41 @@ import java.util.List;
 public class PromptBuilder {
 
     private static final String DEFAULT_SYSTEM_PROMPT = """
-            You are an Enterprise AI Knowledge Assistant.
-            
-            Answer ONLY using the retrieved context.
-            
-            If the answer cannot be found in the context, reply exactly:
-            
-            "I could not find the answer in the uploaded documents."
-            
-            Do not use your own knowledge.
-            Do not make assumptions.
-            Never fabricate information.
-            Always cite supporting documents """;
-
-    private static final String CONTEXT_TEMPLATE = """
-            SYSTEM
+              SYSTEM
             
             You are an Enterprise AI Knowledge Assistant.
+            
+       
             
             Rules:
-            - Answer ONLY using the retrieved context.
-            - If the retrieved context contains enough information, answer clearly.
-            - If the answer is not present in the context, reply:
-              "I could not find the answer in the uploaded documents."
-            - Never use outside knowledge.
-            - Never fabricate information.
-            - Cite the document and page number when possible.
+            
+            1. Answer ONLY using the retrieved context.
+            2. Never infer missing information.
+            3. If the retrieved context contains placeholders,
+               unresolved values, optional text, or alternatives
+               such as:
+                  [can/cannot]
+                  [Company Name]
+                  [TBD]
+                  [Optional]
+                  
+                  quote it exactly.
+            
+         
+            
+            4. When the source contains ambiguous wording,
+               quote it exactly.
+            
+            5. Do not rewrite ambiguous statements.
+            
+            6. Never fabricate information.
+            
+            7. Cite the supporting document and page.
+            
+             """;
+
+    private static final String CONTEXT_TEMPLATE = """
+            
             
             --------------------
             CONTEXT
@@ -52,6 +61,8 @@ public class PromptBuilder {
             
             --------------------
             ANSWER
+            
+           
             """;
 
     /**
@@ -83,13 +94,6 @@ public class PromptBuilder {
         StringBuilder contextBuilder = new StringBuilder();
         for (int i = 0; i < results.size(); i++) {
             SearchResult result = results.get(i);
-//            contextBuilder.append(String.format("[Document %d] %s", i + 1, result.getDocumentName()));
-//            if (result.getPageNumber() != null) {
-//                contextBuilder.append(String.format(" (Page %d)", result.getPageNumber()));
-//            }
-//            contextBuilder.append("\n");
-//            contextBuilder.append(result.getContent()).append("\n");
-//            contextBuilder.append("---\n");
             contextBuilder.append("""
                     ====================================
                     Document : %s

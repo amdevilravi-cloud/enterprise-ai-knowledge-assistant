@@ -40,14 +40,16 @@ public class ChatResponse {
         private Integer pageNumber;
         private Integer chunkIndex;
         private Double relevanceScore;
+        private String content;
 
         public Citation() {}
 
-        public Citation(String documentName, Integer pageNumber, Integer chunkIndex, Double relevanceScore) {
+        public Citation(String documentName, Integer pageNumber, Integer chunkIndex, Double relevanceScore, String excerpt) {
             this.documentName = documentName;
             this.pageNumber = pageNumber;
             this.chunkIndex = chunkIndex;
             this.relevanceScore = relevanceScore;
+            this.content = excerpt;
         }
 
         public String getDocumentName() { return documentName; }
@@ -61,6 +63,9 @@ public class ChatResponse {
 
         public Double getRelevanceScore() { return relevanceScore; }
         public void setRelevanceScore(Double relevanceScore) { this.relevanceScore = relevanceScore; }
+
+        public String getContent() { return content; }
+        public void setContent(String content) { this.content = content; }
     }
 }
 

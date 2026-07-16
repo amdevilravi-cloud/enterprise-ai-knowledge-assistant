@@ -68,14 +68,17 @@ public class ChatController {
      * 4. Return the response with citations to source documents
      *
      * @param message The user's question/message
-     * @param topK    Number of context chunks to retrieve (default: 5)
+     * @param vectorTopK Number of context chunks to retrieve from vector store (default: 20)
+     * @param finalTopN  Number of final candidates after re-ranking (default: 3)
      * @return ChatResponse with answer and citations
      */
     @GetMapping("/rag")
-    public ChatResponse ragChat(@RequestParam String message, @RequestParam(defaultValue = "5") int topK) {
+    public ChatResponse ragChat(@RequestParam String message,
+                                @RequestParam(name = "vectorTopK", defaultValue = "20") int vectorTopK,
+                                @RequestParam(name = "finalTopN", defaultValue = "3") int finalTopN) {
         try {
-            // Step 1: Retrieve relevant documents
-            List<SearchResult> results = retriever.retrieve(message, topK);
+            // Step 1-4: Two-stage retrieval + re-ranking
+            List<SearchResult> results = retriever.retrieveAndRerank(message, vectorTopK, finalTopN);
 
             // Step 2: Build RAG prompt with context
             String ragPrompt = promptBuilder.buildRagPrompt(message, results);
@@ -96,7 +99,8 @@ public class ChatController {
                             r.getDocumentName(),
                             r.getPageNumber(),
                             r.getChunkIndex(),
-                            r.getScore()
+                            r.getScore(),
+                            r.getContent()
                     ))
                     .collect(Collectors.toList());
 
@@ -109,5 +113,15 @@ public class ChatController {
                     .content();
             return new ChatResponse(answer, List.of(), false, 0);
         }
+    }
+
+    private String createExcerpt(String content){
+
+        if (content.length() <= 40) {
+            return content;
+        } else {
+            return content.substring(0, 40) + "...";
+        }
+
     }
 }

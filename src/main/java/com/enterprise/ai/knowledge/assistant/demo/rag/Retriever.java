@@ -5,6 +5,7 @@ import com.enterprise.ai.knowledge.assistant.demo.embedding.service.EmbeddingSer
 import com.enterprise.ai.knowledge.assistant.demo.repository.SearchResult;
 import com.enterprise.ai.knowledge.assistant.demo.vector.service.VectorStoreService;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -18,11 +19,25 @@ public class Retriever {
 
     private final EmbeddingService embeddingService;
     private final VectorStoreService vectorStoreService;
+    private final MetaDataFilter metaDataFilter;
+    private final ReRanker reRanker;
     private static final int DEFAULT_K = 5; // Number of chunks to retrieve
 
-    public Retriever(EmbeddingService embeddingService, VectorStoreService vectorStoreService) {
+    private final int defaultVectorTopK;
+    private final int defaultFinalTopN;
+
+    public Retriever(EmbeddingService embeddingService,
+                     VectorStoreService vectorStoreService,
+                     MetaDataFilter metaDataFilter,
+                     ReRanker reRanker,
+                     @Value("${app.rag.vectorTopK:20}") int defaultVectorTopK,
+                     @Value("${app.rag.finalTopN:3}") int defaultFinalTopN) {
         this.embeddingService = embeddingService;
         this.vectorStoreService = vectorStoreService;
+        this.metaDataFilter = metaDataFilter;
+        this.reRanker = reRanker;
+        this.defaultVectorTopK = defaultVectorTopK;
+        this.defaultFinalTopN = defaultFinalTopN;
     }
 
     /**
@@ -55,6 +70,39 @@ public class Retriever {
         } catch (Exception e) {
             // Best-effort: return empty list on error
             return List.of();
+        }
+    }
+
+    /**
+     * Two-stage retrieval: vector search -> metadata filter -> re-rank -> top N
+     */
+    public List<SearchResult> retrieveAndRerank(String query, Integer vectorTopK, Integer finalTopN) {
+        int k = vectorTopK == null ? this.defaultVectorTopK : vectorTopK;
+        int n = finalTopN == null ? this.defaultFinalTopN : finalTopN;
+
+        try {
+            EmbeddingResult embeddingResult = embeddingService.generateEmbedding(query);
+            if (embeddingResult == null || embeddingResult.vector() == null) {
+                return List.of();
+            }
+
+            List<SearchResult> initial = vectorStoreService.findNearest(embeddingResult.vector(), k);
+
+            // Apply metadata filter (default pass-through)
+            List<SearchResult> filtered = metaDataFilter.filter(initial, null);
+
+            // Re-rank and return top N
+            List<SearchResult> finalResults = reRanker.rerank(filtered, query, n);
+            return finalResults;
+        } catch (Exception e) {
+            // On any error, best-effort: fallback to simple vector search top-n
+            try {
+                EmbeddingResult embeddingResult = embeddingService.generateEmbedding(query);
+                if (embeddingResult == null || embeddingResult.vector() == null) return List.of();
+                return vectorStoreService.findNearest(embeddingResult.vector(), n);
+            } catch (Exception ex) {
+                return List.of();
+            }
         }
     }
 

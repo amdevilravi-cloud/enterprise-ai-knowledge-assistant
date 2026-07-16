@@ -10,6 +10,7 @@ public class SearchResult {
     private final String documentName;
     private final Integer chunkIndex;
 
+
     public SearchResult(String content, double score, Integer pageNumber, String documentName, Integer chunkIndex) {
         this.content = content;
         this.score = score;
@@ -23,5 +24,6 @@ public class SearchResult {
     public Integer getPageNumber() { return pageNumber; }
     public String getDocumentName() { return documentName; }
     public Integer getChunkIndex() { return chunkIndex; }
+
 }
 
