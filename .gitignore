@@ -24,7 +24,6 @@ logs/
 *.rar
 
 # Maven
-*.xml
 *.lst
 *.target
 
