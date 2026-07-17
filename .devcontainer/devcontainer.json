@@ -1,38 +1,37 @@
 {
   "name": "Enterprise AI Knowledge Assistant",
-  "image": "mcr.microsoft.com/devcontainers/java:21",
+
+  "image": "mcr.microsoft.com/devcontainers/java:1-21-bookworm",
+
   "features": {
     "ghcr.io/devcontainers/features/docker-in-docker:2": {}
   },
-  "forwardPorts": [8080],
+
+  "forwardPorts": [8080, 5432],
+
   "portsAttributes": {
     "8080": {
-      "label": "Application",
-      "onAutoForward": "notify"
+      "label": "Spring Boot"
+    },
+    "5432": {
+      "label": "PostgreSQL"
     }
   },
-  "dockerComposeFile": "../docker-compose.yml",
-  "service": "app",
-  "workspaceFolder": "/workspaces/enterprise-ai-knowledge-assistant",
-  "containerEnv": {
-    "SPRING_PROFILES_ACTIVE": "codespace"
-  },
-  "postCreateCommand": "mvn dependency:resolve && mvn clean package -DskipTests",
+
+  "postCreateCommand": "mvn -q dependency:resolve",
+
   "customizations": {
     "vscode": {
       "extensions": [
-        "vscjava.extension-pack-for-java",
+        "vscjava.vscode-java-pack",
         "vmware.vscode-spring-boot",
-        "redhat.vscode-xml"
-      ],
-      "settings": {
-        "java.configuration.updateBuildConfiguration": "automatic",
-        "[java]": {
-          "editor.defaultFormatter": "redhat.java",
-          "editor.formatOnSave": true
-        }
-      }
+        "redhat.vscode-xml",
+        "ms-azuretools.vscode-docker"
+      ]
     }
+  },
+
+  "remoteEnv": {
+    "SPRING_PROFILES_ACTIVE": "codespace"
   }
 }
-
