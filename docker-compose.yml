@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: enterprise-ai-app
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: codespace
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/enterprise_ai
+      SPRING_DATASOURCE_USERNAME: workspace
+      SPRING_DATASOURCE_PASSWORD: MyStrongPassword123!
+      SPRING_AI_OPENAI_API_KEY: ${OPENAI_API_KEY:-not-set}
+      APP_LLM_PROVIDER: openai
+    volumes:
+      - .:/workspaces/enterprise-ai-knowledge-assistant
+    working_dir: /workspaces/enterprise-ai-knowledge-assistant
+
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: enterprise-ai-db
+    environment:
+      POSTGRES_DB: enterprise_ai
+      POSTGRES_USER: workspace
+      POSTGRES_PASSWORD: MyStrongPassword123!
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U workspace -d enterprise_ai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db-data:
+
+

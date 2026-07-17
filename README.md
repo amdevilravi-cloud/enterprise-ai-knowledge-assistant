@@ -39,6 +39,39 @@ Notes about tests and running locally
 - The test profile uses H2 in PostgreSQL compatibility mode. H2 does not support the pgvector extension, so `PostgresService.findNearest(...)` will return an empty list when running tests against H2. The application tolerates this and continues to operate, but nearest-neighbor search requires a real Postgres + pgvector for correct behavior.
 - If you want reproducible integration tests for pgvector, consider adding Testcontainers with a Postgres image that has pgvector installed (I can add this if you want).
 
+## GitHub Codespaces Support 🚀
+
+This project is fully configured to run in GitHub Codespaces with automatic PostgreSQL + pgvector setup and OpenAI integration.
+
+### Prerequisites for Codespaces
+
+1. **Add OpenAI API Key as a Codespace Secret:**
+   - Go to [github.com/settings/codespaces](https://github.com/settings/codespaces)
+   - Click "Codespace secrets" (or "New secret")
+   - Create a secret named `OPENAI_API_KEY` with your OpenAI API key
+   - **Important:** This secret must be added **before** creating the Codespace for it to be available to the environment
+
+2. **Optional: Set LM Studio URL locally**
+   - If running locally with LM Studio, set the environment variable: `export LM_STUDIO_URL=http://your-ip:1234`
+   - Default is `http://localhost:1234`
+
+### Launch in Codespaces
+
+1. Click "Code" → "Codespaces" → "Create codespace on main"
+2. Wait for the container to start (the dev container will automatically):
+   - Start a PostgreSQL 16 + pgvector service
+   - Download Maven dependencies
+   - Build the application
+3. Once ready, the app will be accessible at `http://localhost:8080` (forwarded port)
+4. The application uses the `codespace` profile automatically
+
+### Codespaces Configuration Files
+
+- **`docker-compose.yml`** — Defines PostgreSQL + pgvector service for Codespaces
+- **`.devcontainer/devcontainer.json`** — Dev container setup with Java 21, Docker-in-Docker, and Spring Boot extensions
+- **`application-codespace.properties`** — Profile-specific config (OpenAI endpoint, Docker DB connection)
+- **`init-db.sql`** — Initializes pgvector extension on DB startup
+
 How to build & run
 
 From the project root:

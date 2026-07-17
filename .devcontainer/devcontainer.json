@@ -1,0 +1,38 @@
+{
+  "name": "Enterprise AI Knowledge Assistant",
+  "image": "mcr.microsoft.com/devcontainers/java:21",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "forwardPorts": [8080],
+  "portsAttributes": {
+    "8080": {
+      "label": "Application",
+      "onAutoForward": "notify"
+    }
+  },
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/enterprise-ai-knowledge-assistant",
+  "containerEnv": {
+    "SPRING_PROFILES_ACTIVE": "codespace"
+  },
+  "postCreateCommand": "mvn dependency:resolve && mvn clean package -DskipTests",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.extension-pack-for-java",
+        "vmware.vscode-spring-boot",
+        "redhat.vscode-xml"
+      ],
+      "settings": {
+        "java.configuration.updateBuildConfiguration": "automatic",
+        "[java]": {
+          "editor.defaultFormatter": "redhat.java",
+          "editor.formatOnSave": true
+        }
+      }
+    }
+  }
+}
+

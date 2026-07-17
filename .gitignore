@@ -3,12 +3,16 @@
 
 # Log file
 *.log
+logs/
 
 # BlueJ files
 *.ctxt
 
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
+
+# Build output
+/target/
 
 # Package Files #
 *.jar
@@ -18,9 +22,28 @@
 *.zip
 *.tar.gz
 *.rar
+
+# Maven
 *.xml
 *.lst
 *.target
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+
+# virtual machine crash logs
 hs_err_pid*
 replay_pid*
+
+# IDE - IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Environment variables
+.env
+.env.*
+!.env.example
