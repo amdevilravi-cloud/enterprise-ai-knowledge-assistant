@@ -3,6 +3,7 @@ package com.enterprise.ai.knowledge.assistant.demo.conversation.repository;
 import com.enterprise.ai.knowledge.assistant.demo.chat.dto.ChatResponse;
 import com.enterprise.ai.knowledge.assistant.demo.conversation.entity.Conversation;
 import com.enterprise.ai.knowledge.assistant.demo.conversation.entity.ConversationMessage;
+import jakarta.annotation.PostConstruct;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,23 @@ public class PostgresConversationRepository implements ConversationRepository {
 
     public PostgresConversationRepository(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
+    }
+
+    @PostConstruct
+    public void ensureTable() {
+        try {
+            jdbcTemplate.execute("CREATE EXTENSION IF NOT EXISTS vector");
+        } catch (Exception ignored) {}
+
+        String sql = "CREATE TABLE IF NOT EXISTS conversations (" +
+                "id UUID PRIMARY KEY, " +
+                "title TEXT, " +
+                "created_at TIMESTAMP, " +
+                "updated_at TIMESTAMP, " +
+                "metadata JSONB" +
+                ")";
+
+        jdbcTemplate.execute(sql);
     }
 
     @Override
