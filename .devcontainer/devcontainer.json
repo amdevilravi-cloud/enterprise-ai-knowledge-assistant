@@ -35,8 +35,12 @@
 //    "SPRING_PROFILES_ACTIVE": "codespace"
 //  }
 //}
-
 {
-  "name": "Java 21",
-  "image": "mcr.microsoft.com/devcontainers/java:1-21-bookworm"
+  "name": "Enterprise AI Knowledge Assistant",
+  "image": "mcr.microsoft.com/devcontainers/java:1-21-bookworm",
+
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/maven:1": {}
+  }
 }
