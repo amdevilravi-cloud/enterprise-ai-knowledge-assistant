@@ -2,6 +2,8 @@ package com.enterprise.ai.knowledge.assistant.demo.rag;
 
 import com.enterprise.ai.knowledge.assistant.demo.embedding.dto.EmbeddingResult;
 import com.enterprise.ai.knowledge.assistant.demo.embedding.service.EmbeddingService;
+import com.enterprise.ai.knowledge.assistant.demo.rag.retriever.HybridRetriever;
+import com.enterprise.ai.knowledge.assistant.demo.rag.rewriter.QueryRewriter;
 import com.enterprise.ai.knowledge.assistant.demo.repository.SearchResult;
 import com.enterprise.ai.knowledge.assistant.demo.vector.service.VectorStoreService;
 import org.springframework.stereotype.Component;
@@ -135,4 +137,3 @@ public class Retriever {
         return sb.toString();
     }
 }
-

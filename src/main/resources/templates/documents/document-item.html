@@ -1,0 +1,87 @@
+<div th:fragment="document" class="document-item">
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-auto">
+                    <i class="fas fa-file-pdf fa-2x text-danger"></i>
+                </div>
+                <div class="col">
+                    <h6 class="card-title mb-1" th:text="${document.fileName}">document.pdf</h6>
+                    <small class="text-muted">
+                        <i class="fas fa-calendar me-1"></i><span th:text="${#temporals.format(document.uploadedAt, 'yyyy-MM-dd HH:mm')}">Date</span>
+                        <i class="fas fa-database ms-2 me-1"></i><span th:text="${document.fileSize} + ' KB'">Size</span>
+                        <i class="fas fa-cubes ms-2 me-1"></i><span th:text="${document.chunksCreated} + ' chunks'">Chunks</span>
+                    </small>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-sm btn-info me-2"
+                            th:attr="hx-get='/api/documents/' + ${document.documentId} + '/metadata'"
+                            hx-target="#metadataModal"
+                            data-bs-toggle="modal"
+                            data-bs-target="#metadataModal">
+                        <i class="fas fa-info-circle"></i>
+                    </button>
+                    <button class="btn btn-sm btn-warning me-2"
+                            th:attr="hx-post='/api/documents/' + ${document.documentId} + '/reindex'"
+                            hx-confirm="Reindex this document?">
+                        <i class="fas fa-sync"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger"
+                            th:attr="hx-delete='/api/documents/' + ${document.documentId}"
+                            hx-confirm="Delete this document?"
+                            hx-target="closest .document-item"
+                            hx-swap="delete swap:1s">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:fragment="list" class="document-list">
+    <div th:each="doc : ${documents}" th:replace="~{documents/document-item :: document(document=${doc})}"></div>
+</div>
+
+<div th:fragment="error" class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    <span th:text="${error}">An error occurred</span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+
+<div th:fragment="status" class="alert alert-info alert-dismissible fade show" role="alert">
+    <i class="fas fa-sync fa-spin me-2"></i>
+    <span th:text="'Document ' + ${documentId} + ' is being ' + ${status}">Status message</span>
+</div>
+
+<div th:fragment="metadata" class="modal fade" id="metadataModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Document Metadata</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <dl class="row">
+                    <dt class="col-sm-4">File Name:</dt>
+                    <dd class="col-sm-8" th:text="${metadata.fileName}">Name</dd>
+
+                    <dt class="col-sm-4">File Size:</dt>
+                    <dd class="col-sm-8" th:text="${metadata.fileSize} + ' bytes'">Size</dd>
+
+                    <dt class="col-sm-4">Chunks:</dt>
+                    <dd class="col-sm-8" th:text="${metadata.chunkCount}">Count</dd>
+
+                    <dt class="col-sm-4">Embeddings:</dt>
+                    <dd class="col-sm-8" th:text="${metadata.embeddingCount}">Count</dd>
+
+                    <dt class="col-sm-4">Uploaded:</dt>
+                    <dd class="col-sm-8" th:text="${#temporals.format(metadata.uploadedAt, 'yyyy-MM-dd HH:mm:ss')}">Date</dd>
+
+                    <dt class="col-sm-4">Indexed:</dt>
+                    <dd class="col-sm-8" th:text="${#temporals.format(metadata.indexedAt, 'yyyy-MM-dd HH:mm:ss')}">Date</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>

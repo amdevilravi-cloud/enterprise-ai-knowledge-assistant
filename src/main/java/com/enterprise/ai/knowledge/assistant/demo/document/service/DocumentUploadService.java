@@ -1,6 +1,7 @@
 package com.enterprise.ai.knowledge.assistant.demo.document.service;
 
 import com.enterprise.ai.knowledge.assistant.demo.document.dto.DocumentUploadResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -9,11 +10,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.Collections;
+import java.util.*;
 
-/**
- * Service responsible for saving uploaded files and delegating ingestion.
- */
+@Slf4j
 @Service
 public class DocumentUploadService {
 
@@ -33,9 +32,10 @@ public class DocumentUploadService {
 		}
 	}
 
-	/**
-	 * Save the uploaded MultipartFile and ingest it.
-	 */
+	public DocumentUploadResponse uploadDocument(MultipartFile file) throws IOException {
+		return save(file);
+	}
+
 	public DocumentUploadResponse save(MultipartFile file) throws IOException {
 		if (file == null || file.isEmpty()) {
 			DocumentUploadResponse response = new DocumentUploadResponse();
@@ -67,5 +67,33 @@ public class DocumentUploadService {
 			response.setChunkContents(Collections.emptyList());
 			return response;
 		}
+	}
+
+	public List<DocumentUploadResponse> listDocuments() {
+		log.info("Listing documents");
+		// Return mock data for now - in production, query from database
+		return Collections.emptyList();
+	}
+
+	public void deleteDocument(String id) {
+		log.info("Deleting document: {}", id);
+		// TODO: Implement document deletion from database
+	}
+
+	public void reindexDocument(String id) {
+		log.info("Reindexing document: {}", id);
+		// TODO: Implement document re-indexing
+	}
+
+	public Map<String, Object> getDocumentMetadata(String id) {
+		log.info("Getting metadata for document: {}", id);
+		Map<String, Object> metadata = new HashMap<>();
+		metadata.put("fileName", "sample-document.pdf");
+		metadata.put("fileSize", 1024000);
+		metadata.put("chunkCount", 25);
+		metadata.put("embeddingCount", 25);
+		metadata.put("uploadedAt", new Date());
+		metadata.put("indexedAt", new Date());
+		return metadata;
 	}
 }

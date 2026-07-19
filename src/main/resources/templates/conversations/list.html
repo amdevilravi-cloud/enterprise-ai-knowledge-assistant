@@ -1,0 +1,44 @@
+<div th:fragment="conversations" class="conversation-list">
+    <div th:each="conv : ${conversations}" class="card mb-3">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col">
+                    <a th:href="@{/ui/conversation/{id}(id=${conv.id})}" class="text-decoration-none">
+                        <h6 class="card-title" th:text="${conv.title ?: 'Untitled Conversation'}">Conversation Title</h6>
+                    </a>
+                    <small class="text-muted">
+                        <i class="fas fa-message me-1"></i><span th:text="${conv.messageCount} + ' messages'">Messages</span>
+                        <i class="fas fa-calendar ms-2 me-1"></i><span th:text="${#temporals.format(conv.createdAt, 'MMM dd, yyyy HH:mm')}">Date</span>
+                        <span th:if="${conv.lastActivity}" class="ms-2">
+                            <i class="fas fa-clock me-1"></i>Last active: <span th:text="${conv.lastActivity}">time</span>
+                        </span>
+                    </small>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-sm btn-primary me-2"
+                            th:onclick="'window.location.href = &quot;/ui/conversation/' + ${conv.id} + '&quot;'">
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                    <button class="btn btn-sm btn-warning me-2"
+                            th:attr="hx-post='/api/ui/chat/conversation/' + ${conv.id} + '/export'"
+                            hx-swap="none">
+                        <i class="fas fa-download"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger"
+                            th:attr="hx-delete='/api/ui/chat/conversation/' + ${conv.id}"
+                            hx-confirm="Delete this conversation?"
+                            hx-target="closest .card"
+                            hx-swap="delete swap:1s">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:fragment="error" class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    <span th:text="${error}">An error occurred</span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>

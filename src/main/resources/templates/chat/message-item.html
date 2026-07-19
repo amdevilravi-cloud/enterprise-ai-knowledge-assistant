@@ -1,0 +1,55 @@
+<div th:fragment="message" class="message-item mb-3">
+    <!-- User Message -->
+    <div th:if="${response.role == 'user'}" class="d-flex justify-content-end mb-3">
+        <div class="bg-primary text-white p-3 rounded" style="max-width: 70%;">
+            <p class="mb-0" th:text="${response.content}">Message content</p>
+            <small class="text-light" th:text="${#temporals.format(response.timestamp, 'HH:mm')}">12:34</small>
+        </div>
+    </div>
+
+    <!-- Assistant Message -->
+    <div th:if="${response.role == 'assistant'}" class="d-flex justify-content-start mb-3">
+        <div class="bg-light p-3 rounded" style="max-width: 70%;">
+            <p th:text="${response.content}">Response content</p>
+
+            <!-- Citations -->
+            <div th:if="${!#lists.isEmpty(response.citations)}" class="mt-3 pt-3 border-top">
+                <small class="text-muted d-block mb-2">
+                    <i class="fas fa-quote-left me-1"></i>Sources:
+                </small>
+                <div th:each="citation : ${response.citations}" class="mb-2">
+                    <a href="#"
+                       hx-get="'/api/chat/citation/' + ${citation.chunkHash}"
+                       hx-target="#citationContent"
+                       data-bs-toggle="modal"
+                       data-bs-target="#citationModal"
+                       class="text-decoration-none">
+                        <small>
+                            <i class="fas fa-file me-1"></i>
+                            <span th:text="${citation.documentName}">Document</span>
+                            <span th:text="'(p. ' + ${citation.pageNumber} + ')'">Page</span>
+                            <span class="badge" th:classappend="'bg-' + (${citation.relevanceScore > 0.8} ? 'success' : ${citation.relevanceScore > 0.5} ? 'warning' : 'danger')"
+                                  th:text="'Relevance: ' + ${#numbers.formatDecimal(citation.relevanceScore, 1, 2)}">Score</span>
+                        </small>
+                    </a>
+                </div>
+            </div>
+
+            <small class="text-muted" th:text="${#temporals.format(response.timestamp, 'HH:mm')}">12:34</small>
+        </div>
+    </div>
+
+    <!-- Error Message -->
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <span th:text="${error}">Error message</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+</div>
+
+<div th:fragment="error" class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    <span th:text="${error}">An error occurred</span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+

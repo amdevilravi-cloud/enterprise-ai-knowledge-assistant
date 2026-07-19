@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Enterprise AI Knowledge Assistant</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body class="d-flex flex-column min-vh-100">
+    <!-- Navigation -->
+    <th:block th:insert="~{fragments/navbar}"></th:block>
+
+    <div class="flex-grow-1 d-flex">
+        <!-- Sidebar -->
+        <th:block th:insert="~{fragments/sidebar}"></th:block>
+
+        <!-- Main Content -->
+        <main class="flex-grow-1 p-4">
+            <h2 class="mb-4">
+                <i class="fas fa-cog me-2"></i>Settings
+            </h2>
+
+            <div class="row">
+                <div class="col-lg-8">
+                    <!-- Display Settings -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Display Settings</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="darkMode">
+                                    <label class="form-check-label" for="darkMode">
+                                        Dark Mode
+                                    </label>
+                                </div>
+                                <small class="text-muted d-block mt-1">Enable dark theme for the interface</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="language" class="form-label">Language</label>
+                                <select class="form-select" id="language">
+                                    <option selected>English</option>
+                                    <option>Español</option>
+                                    <option>Français</option>
+                                    <option>Deutsch</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="fontSize" class="form-label">Font Size</label>
+                                <select class="form-select" id="fontSize">
+                                    <option>Small</option>
+                                    <option selected>Normal</option>
+                                    <option>Large</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RAG Configuration -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">RAG Configuration</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="topK" class="form-label">Top-K Results</label>
+                                <input type="number" class="form-control" id="topK" value="5" min="1" max="20">
+                                <small class="text-muted">Number of document chunks to retrieve</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="hybridSearch">
+                                    <label class="form-check-label" for="hybridSearch">
+                                        Enable Hybrid Search
+                                    </label>
+                                </div>
+                                <small class="text-muted d-block mt-1">Combine vector and keyword search</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="contextCompression">
+                                    <label class="form-check-label" for="contextCompression">
+                                        Enable Context Compression
+                                    </label>
+                                </div>
+                                <small class="text-muted d-block mt-1">Extract relevant sentences from chunks</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="queryRewriting">
+                                    <label class="form-check-label" for="queryRewriting">
+                                        Enable Query Rewriting
+                                    </label>
+                                </div>
+                                <small class="text-muted d-block mt-1">Rewrite ambiguous queries for better results</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notification Settings -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h6 class="mb-0">Notifications</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="notifyQueries" checked>
+                                    <label class="form-check-label" for="notifyQueries">
+                                        Query completion notifications
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="notifyDocuments" checked>
+                                    <label class="form-check-label" for="notifyDocuments">
+                                        Document upload notifications
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="notifyErrors">
+                                    <label class="form-check-label" for="notifyErrors">
+                                        Error notifications
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Save Button -->
+                    <button class="btn btn-primary btn-lg w-100 mb-4">
+                        <i class="fas fa-save me-2"></i>Save Settings
+                    </button>
+                </div>
+
+                <!-- Sidebar -->
+                <div class="col-lg-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">System Information</h6>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row">
+                                <dt class="col-sm-6">Application</dt>
+                                <dd class="col-sm-6">
+                                    <small>Enterprise AI</small>
+                                </dd>
+
+                                <dt class="col-sm-6">Version</dt>
+                                <dd class="col-sm-6">
+                                    <small>1.0.0</small>
+                                </dd>
+
+                                <dt class="col-sm-6">Backend</dt>
+                                <dd class="col-sm-6">
+                                    <small>Spring AI 1.1.8</small>
+                                </dd>
+
+                                <dt class="col-sm-6">Database</dt>
+                                <dd class="col-sm-6">
+                                    <small>PostgreSQL + pgvector</small>
+                                </dd>
+
+                                <dt class="col-sm-6">LLM Provider</dt>
+                                <dd class="col-sm-6">
+                                    <small>LM Studio</small>
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <h6 class="mb-0">Support</h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small">
+                                Need help? Check our documentation or contact support.
+                            </p>
+                            <div class="d-grid gap-2">
+                                <a href="/docs" class="btn btn-sm btn-outline-primary">Documentation</a>
+                                <a href="mailto:support@example.com" class="btn btn-sm btn-outline-secondary">Contact Support</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <th:block th:insert="~{fragments/footer}"></th:block>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>
+

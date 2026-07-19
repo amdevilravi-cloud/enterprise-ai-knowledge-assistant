@@ -1,17 +1,23 @@
 package com.enterprise.ai.knowledge.assistant.demo.chat;
 
 import com.enterprise.ai.knowledge.assistant.demo.chat.dto.ChatResponse;
+import com.enterprise.ai.knowledge.assistant.demo.conversation.dto.ConversationRequest;
+import com.enterprise.ai.knowledge.assistant.demo.conversation.dto.ConversationStartResponse;
+import com.enterprise.ai.knowledge.assistant.demo.conversation.service.ConversationService;
 import com.enterprise.ai.knowledge.assistant.demo.rag.PromptBuilder;
 import com.enterprise.ai.knowledge.assistant.demo.rag.Retriever;
 import com.enterprise.ai.knowledge.assistant.demo.rag.dto.RagPrompt;
 import com.enterprise.ai.knowledge.assistant.demo.repository.SearchResult;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -31,6 +37,7 @@ public class ChatController {
     private final ChatClient chatClient;
     private final Retriever retriever;
     private final PromptBuilder promptBuilder;
+    private final ConversationService conversationService;
 
     /**
      * Constructor-based dependency injection for ChatClient, Retriever, and PromptBuilder.
@@ -39,10 +46,12 @@ public class ChatController {
      * - Uses OpenAI when app.llm.provider=openai (default)
      * - Uses LM Studio when app.llm.provider=lmstudio
      */
-    public ChatController(ChatClient chatClient, Retriever retriever, PromptBuilder promptBuilder) {
+    public ChatController(ChatClient chatClient, Retriever retriever, PromptBuilder promptBuilder,
+                          ConversationService conversationService) {
         this.chatClient = chatClient;
         this.retriever = retriever;
         this.promptBuilder = promptBuilder;
+        this.conversationService = conversationService;
     }
 
     /**
@@ -114,5 +123,18 @@ public class ChatController {
                     .content();
             return new ChatResponse(answer, List.of(), false, 0);
         }
+    }
+
+    /**
+     * Conversation endpoint that starts a new conversation.
+     *
+     * @param request The conversation request
+     * @return The conversation start response
+  */
+    @PostMapping("/converse")
+    public ChatResponse converse(@RequestParam UUID conversationId,
+                                  @RequestBody ConversationRequest request) {
+        int historyDepth = request.getHistoryDepth() > 0 ? request.getHistoryDepth() : 5;
+        return conversationService.chat(conversationId, request.getMessage(), historyDepth);
     }
 }

@@ -1,0 +1,164 @@
+package com.enterprise.ai.knowledge.assistant.demo.conversation.repository;
+
+import com.enterprise.ai.knowledge.assistant.demo.chat.dto.ChatResponse;
+import com.enterprise.ai.knowledge.assistant.demo.conversation.entity.Conversation;
+import com.enterprise.ai.knowledge.assistant.demo.conversation.entity.ConversationMessage;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.stereotype.Service;
+
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.*;
+
+@Service
+public class PostgresConversationRepository implements ConversationRepository {
+
+    private final JdbcTemplate jdbcTemplate;
+
+    public PostgresConversationRepository(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
+    }
+
+    @Override
+    public UUID createConversation(String title) {
+        UUID id = UUID.randomUUID();
+        Instant now = Instant.now();
+        String sql = "INSERT INTO conversations (id, title, created_at, updated_at, metadata) VALUES (?, ?, ?, ?, ?)";
+        jdbcTemplate.update(sql, id, title, Timestamp.from(now), Timestamp.from(now), "{}");
+        return id;
+    }
+
+    @Override
+    public Optional<Conversation> getConversation(UUID conversationId) {
+        String sql = "SELECT id, title, created_at, updated_at, metadata FROM conversations WHERE id = ?";
+        try {
+            Conversation conv = jdbcTemplate.queryForObject(sql, conversationRowMapper(), conversationId);
+            return Optional.ofNullable(conv);
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
+
+    @Override
+    public List<ConversationMessage> getRecentMessages(UUID conversationId, int limit) {
+        String sql = "SELECT id, conversation_id, message_order, role, message, created_at, metadata " +
+                     "FROM conversation_messages WHERE conversation_id = ? ORDER BY message_order DESC LIMIT ?";
+        return jdbcTemplate.query(sql, messageRowMapper(), conversationId, limit);
+    }
+
+    @Override
+    public void saveMessage(ConversationMessage message) {
+        UUID id = message.getId() == null ? UUID.randomUUID() : message.getId();
+        Instant now = message.getCreatedAt() == null ? Instant.now() : message.getCreatedAt();
+
+        String sql = "INSERT INTO conversation_messages (id, conversation_id, message_order, role, message, created_at, metadata) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?)";
+
+        jdbcTemplate.update(sql,
+            id,
+            message.getConversationId(),
+            message.getMessageOrder(),
+            message.getRole(),
+            message.getMessage(),
+            Timestamp.from(now),
+            "{}"
+        );
+
+        message.setId(id);
+        message.setCreatedAt(now);
+    }
+
+    @Override
+    public int getMessageCount(UUID conversationId) {
+        String sql = "SELECT COUNT(*) FROM conversation_messages WHERE conversation_id = ?";
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, conversationId);
+        return count == null ? 0 : count;
+    }
+
+    @Override
+    public void updateConversationTitle(UUID conversationId, String title) {
+        String sql = "UPDATE conversations SET title = ?, updated_at = ? WHERE id = ?";
+        jdbcTemplate.update(sql, title, Timestamp.from(Instant.now()), conversationId);
+    }
+
+    @Override
+    public List<ChatResponse> getConversationHistory(UUID conversationId) {
+        String sql = "SELECT id, conversation_id, message_order, role, message, created_at FROM conversation_messages " +
+                     "WHERE conversation_id = ? ORDER BY message_order ASC";
+        return jdbcTemplate.query(sql, (rs, rowNum) ->
+            new ChatResponse(
+                rs.getString("message"),
+                List.of(),
+                false,
+                0
+            ), conversationId);
+    }
+
+    @Override
+    public List<Map<String, Object>> getAllConversations() {
+        String sql = "SELECT id, title, created_at, " +
+                     "(SELECT MAX(created_at) FROM conversation_messages WHERE conversation_id = c.id) as last_activity, " +
+                     "(SELECT COUNT(*) FROM conversation_messages WHERE conversation_id = c.id) as message_count " +
+                     "FROM conversations c ORDER BY created_at DESC";
+        return jdbcTemplate.query(sql, (rs, rowNum) -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", rs.getObject("id"));
+            map.put("title", rs.getString("title"));
+            Timestamp createdAt = rs.getTimestamp("created_at");
+            if (createdAt != null) {
+                map.put("createdAt", createdAt.toInstant());
+            }
+            Timestamp lastActivity = rs.getTimestamp("last_activity");
+            if (lastActivity != null) {
+                map.put("lastActivity", lastActivity.toInstant());
+            }
+            map.put("messageCount", rs.getInt("message_count"));
+            return map;
+        });
+    }
+
+    @Override
+    public void deleteConversation(UUID conversationId) {
+        String deleteMsgSql = "DELETE FROM conversation_messages WHERE conversation_id = ?";
+        jdbcTemplate.update(deleteMsgSql, conversationId);
+
+        String deleteConvSql = "DELETE FROM conversations WHERE id = ?";
+        jdbcTemplate.update(deleteConvSql, conversationId);
+    }
+
+    @Override
+    public Map<String, Object> getCitationDetails(String chunkHash) {
+        String sql = "SELECT id, content, document_name, page_number, chunk_index FROM embeddings WHERE id = ?";
+        try {
+            return jdbcTemplate.queryForMap(sql, chunkHash);
+        } catch (Exception e) {
+            return new HashMap<>();
+        }
+    }
+
+    // ...existing code...
+
+    private RowMapper<Conversation> conversationRowMapper() {
+        return (rs, rowNum) -> new Conversation(
+            (UUID) rs.getObject("id"),
+            rs.getString("title"),
+            rs.getTimestamp("created_at").toInstant(),
+            rs.getTimestamp("updated_at").toInstant(),
+            null
+        );
+    }
+
+    private RowMapper<ConversationMessage> messageRowMapper() {
+        return (rs, rowNum) -> new ConversationMessage(
+            (UUID) rs.getObject("id"),
+            (UUID) rs.getObject("conversation_id"),
+            rs.getInt("message_order"),
+            rs.getString("role"),
+            rs.getString("message"),
+            rs.getTimestamp("created_at").toInstant(),
+            null
+        );
+    }
+}
+
