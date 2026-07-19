@@ -16,9 +16,9 @@ import java.util.Map;
 
 @Slf4j
 @Controller
-@RequestMapping("/api/documents")
+@RequestMapping("/ui/documents/v2")
 @RequiredArgsConstructor
-public class DocumentRestController {
+public class DocumentUIController {
 
     private final DocumentUploadService documentUploadService;
 
@@ -55,7 +55,7 @@ public class DocumentRestController {
 
             if (isHtmxRequest(request)) {
                 model.addAttribute("documents", documents);
-                return "documents/list :: documents";
+              //  return "documents/list :: documents";
             }
 
             return ResponseEntity.ok(documents);

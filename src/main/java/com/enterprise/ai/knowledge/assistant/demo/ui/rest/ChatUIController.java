@@ -19,7 +19,7 @@ import java.util.*;
 @Controller
 @RequestMapping("/api/ui")
 @RequiredArgsConstructor
-public class ChatRestController {
+public class ChatUIController {
 
     private final ConversationService conversationService;
 

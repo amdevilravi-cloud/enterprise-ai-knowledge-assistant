@@ -28,6 +28,8 @@ This is the primary documentation source for the Enterprise AI Knowledge Assista
 
 Table of contents
 - Diagrams
+- Project Structure
+- Swagger/OpenAPI Documentation
 - README.md (core project overview)
 - Quickstart guide
 - Codespaces implementation & quick start
@@ -35,6 +37,364 @@ Table of contents
 - Phase 6 UI documentation and checklists
 - Checklists, verification, TODO
 - Inclusion report
+
+---
+
+## Project Structure
+
+```
+enterprise-ai-knowledge-assistant/
+├── README.md                              # Quick project overview with link to this documentation
+├── pom.xml                                # Maven configuration with Spring Boot + AI dependencies
+├── Dockerfile                             # Multi-stage Docker build configuration
+├── docker-compose.yml                     # PostgreSQL 16 + pgvector service definition
+├── init-db.sql                            # pgvector extension initialization script
+├── mvnw                                   # Maven wrapper (Unix)
+├── mvnw.cmd                               # Maven wrapper (Windows)
+├── .devcontainer/
+│   └── devcontainer.json                  # GitHub Codespaces dev container configuration
+├── .gitignore                             # Git ignore patterns
+├── docs/
+│   ├── CONSOLIDATED_DOCUMENTATION.md      # PRIMARY: Complete project documentation (this file)
+│   └── diagrams.mmd                       # Mermaid architecture diagrams
+│
+├── src/main/
+│   ├── java/com/enterprise/ai/knowledge/assistant/demo/
+│   │   ├── DemoApplication.java           # Spring Boot application entry point
+│   │   │
+│   │   ├── ui/                            # UI Layer - Thymeleaf Templates & HTMX
+│   │   │   ├── UIController.java          # Main UI routes (/ui/*, /ui/documents, /ui/conversations, etc.)
+│   │   │   └── rest/
+│   │   │       ├── ChatRestController.java    # Chat API endpoints (/api/chat/message, /api/chat/rag, etc.)
+│   │   │       └── DocumentRestController.java # Document API endpoints (/api/documents/upload, etc.)
+│   │   │
+│   │   ├── chat/                          # Chat & Conversation Management
+│   │   │   ├── ChatController.java        # Chat REST endpoints
+│   │   │   ├── service/
+│   │   │   │   └── ConversationService.java # Conversation orchestration & RAG chat logic
+│   │   │   ├── repository/
+│   │   │   │   ├── ConversationRepository.java       # Interface for conversation persistence
+│   │   │   │   └── PostgresConversationRepository.java # JDBC implementation
+│   │   │   ├── entity/
+│   │   │   │   └── Conversation.java      # Conversation entity model
+│   │   │   └── dto/
+│   │   │       ├── ChatResponse.java      # Response DTO with answer + citations
+│   │   │       └── Message.java           # Message DTO
+│   │   │
+│   │   ├── rag/                           # RAG Pipeline Components
+│   │   │   ├── Retriever.java             # Retrieval orchestration (embedding + vector search)
+│   │   │   ├── PromptBuilder.java         # Prompt construction with context injection
+│   │   │   ├── MetaDataFilter.java        # Optional metadata-based filtering
+│   │   │   ├── ReRanker.java              # Re-ranking strategy orchestrator
+│   │   │   ├── template/
+│   │   │   │   ├── PromptTemplate.java    # Interface for pluggable prompt templates
+│   │   │   │   └── DefaultPromptTemplate.java # Default RAG prompt template
+│   │   │   ├── strategy/
+│   │   │   │   ├── ReRankStrategy.java    # Re-ranking strategy interface
+│   │   │   │   ├── EmbeddingReRanker.java # Embedding-based re-ranking
+│   │   │   │   └── LLMReRanker.java       # LLM-based re-ranking
+│   │   │   └── dto/
+│   │   │       └── RagPrompt.java         # RAG prompt record (system + user + metadata)
+│   │   │
+│   │   ├── document/                      # Document Management & Ingestion
+│   │   │   ├── controller/
+│   │   │   │   └── DocumentUploadController.java # File upload endpoint
+│   │   │   ├── service/
+│   │   │   │   ├── DocumentUploadService.java    # Document upload orchestration
+│   │   │   │   ├── DocumentChunkService.java     # Text chunking utility
+│   │   │   │   └── DocumentIngestionOrchestrator.java # Full ingestion pipeline
+│   │   │   ├── parser/                   # Document parser strategy pattern
+│   │   │   │   ├── DocumentParser.java         # Parser interface
+│   │   │   │   ├── TextDocumentParser.java     # .txt, .md, .html files
+│   │   │   │   ├── PdfDocumentParser.java      # .pdf files
+│   │   │   │   └── DocumentParserRegistry.java # Auto-discovery registry
+│   │   │   ├── entity/
+│   │   │   │   └── Document.java         # Document entity
+│   │   │   ├── repository/
+│   │   │   │   └── DocumentRepository.java # Document persistence interface
+│   │   │   └── dto/
+│   │   │       ├── DocumentUploadResponse.java # Upload response DTO
+│   │   │       ├── DocumentMetadata.java      # File metadata record
+│   │   │       └── ParsedDocument.java        # Parsed document record
+│   │   │
+│   │   ├── embedding/                    # Embedding Generation
+│   │   │   ├── EmbeddingService.java      # Spring AI embedding wrapper
+│   │   │   └── PostgresService.java       # pgvector storage & k-NN search
+│   │   │
+│   │   ├── vector/                       # Vector Storage Abstraction
+│   │   │   ├── entity/
+│   │   │   │   └── ChunkEntity.java       # Document chunk with embedding
+│   │   │   └── service/
+│   │   │       └── VectorStoreService.java # Vector store orchestration
+│   │   │
+│   │   ├── repository/                   # Data Models & Interfaces
+│   │   │   ├── SearchResult.java         # Search result DTO (chunk + metadata)
+│   │   │   └── VectorRepository.java     # Vector storage interface (pluggable)
+│   │   │
+│   │   ├── config/                       # Spring Configuration
+│   │   │   ├── ChatClientConfig.java     # Spring AI ChatClient bean configuration
+│   │   │   ├── EmbeddingConfig.java      # EmbeddingModel bean configuration
+│   │   │   └── LLMConfig.java            # LLM provider configuration (LM Studio / OpenAI)
+│   │   │
+│   │   └── error/                        # Error Handling
+│   │       ├── GlobalExceptionHandler.java # Global exception handler
+│   │       └── ApiError.java             # API error response DTO
+│   │
+│   └── resources/
+│       ├── application.properties          # Default configuration (LM Studio)
+│       ├── application-local.properties    # Local development profile
+│       ├── application-codespace.properties # GitHub Codespaces profile (OpenAI)
+│       ├── application-test.properties     # Test profile (H2 database)
+│       │
+│       ├── db/
+│       │   └── migration/
+│       │       ├── V001__initial_schema.sql        # Initial schema with pgvector
+│       │       ├── V002__add_chat_tables.sql       # Chat history tables
+│       │       ├── V003__add_conversation_memory.sql # Conversation memory
+│       │       ├── V004__phase4_enhanced_metadata.sql # Enhanced metadata
+│       │       ├── V005__phase1_conversation_memory.sql # Phase 1 memory
+│       │       └── V006__phase2_hybrid_search.sql  # Phase 2 hybrid search
+│       │
+│       ├── templates/                    # Thymeleaf HTML Templates
+│       │   ├── layout/
+│       │   │   └── base.html              # Master template (navbar, sidebar, footer)
+│       │   │
+│       │   ├── chat/
+│       │   │   ├── index.html             # Main chat interface (1200+ lines)
+│       │   │   ├── conversation.html      # View specific conversation
+│       │   │   ├── message-item.html      # Message bubble fragment with citations
+│       │   │   ├── conversation-started.html # Success alert fragment
+│       │   │   └── citation-modal.html    # Citation preview modal
+│       │   │
+│       │   ├── documents/
+│       │   │   ├── index.html             # Document management page
+│       │   │   └── document-item.html     # Document card fragment + metadata modal
+│       │   │
+│       │   ├── conversations/
+│       │   │   ├── index.html             # Conversation history page
+│       │   │   └── list.html              # Conversation items fragment
+│       │   │
+│       │   ├── analytics/
+│       │   │   └── index.html             # Analytics dashboard
+│       │   │
+│       │   ├── settings/
+│       │   │   └── index.html             # Settings page
+│       │   │
+│       │   └── fragments/
+│       │       ├── navbar.html            # Navigation bar
+│       │       ├── sidebar.html           # Sidebar navigation + quick actions
+│       │       ├── footer.html            # Footer
+│       │       └── head.html              # Extra head content hooks
+│       │
+│       └── static/                       # Static Assets
+│           ├── css/
+│           │   ├── style.css              # Global styles (350+ lines)
+│           │   │   - Color scheme, typography, layout
+│           │   │   - Sidebar, cards, buttons, forms
+│           │   │   - Responsive design
+│           │   │   - Dark mode support
+│           │   │
+│           │   └── chat.css               # Chat-specific styles (250+ lines)
+│           │       - Message bubbles (user/assistant)
+│           │       - Citations styling
+│           │       - Chat input, upload modal
+│           │       - Loading animations
+│           │       - Responsive chat
+│           │
+│           ├── js/
+│           │   ├── app.js                 # Core utilities (400+ lines)
+│           │   │   - Theme management (dark/light)
+│           │   │   - HTMX configuration
+│           │   │   - Notification system
+│           │   │   - CSRF token handling
+│           │   │   - Formatting utilities
+│           │   │   - Validation helpers
+│           │   │   - Keyboard shortcuts
+│           │   │
+│           │   └── chat.js                # Chat logic (350+ lines)
+│           │       - ChatManager class
+│           │       - Auto-scroll behavior
+│           │       - Textarea resize
+│           │       - FileUploadManager
+│           │       - Drag-and-drop support
+│           │       - Progress tracking
+│           │
+│           └── images/                   # Image assets (ready for use)
+│
+├── src/test/
+│   ├── java/com/enterprise/ai/knowledge/assistant/demo/
+│   │   ├── chat/
+│   │   │   └── ChatControllerTest.java   # Chat endpoint tests (5 cases)
+│   │   ├── rag/
+│   │   │   ├── RetrieverTest.java        # Retriever tests (10 cases)
+│   │   │   ├── PromptBuilderTest.java    # PromptBuilder tests (10 cases)
+│   │   │   └── ReRankerStrategyTest.java # Re-ranking strategy tests
+│   │   └── document/
+│   │       └── service/
+│   │           └── DocumentChunkServiceTest.java # Chunking tests
+│   │
+│   └── resources/
+│       └── application-test.properties    # Test profile config
+│
+└── target/                                # Maven build output (generated)
+    ├── classes/                           # Compiled classes
+    ├── test-classes/                      # Compiled test classes
+    ├── enterprise-ai-knowledge-assistant-1.0.0-SNAPSHOT.jar # Built JAR
+    └── surefire-reports/                  # Test reports
+```
+
+### Key Directories
+
+| Directory | Purpose |
+|-----------|---------|
+| `src/main/java/...` | Java source code (services, controllers, entities) |
+| `src/main/resources/` | Configuration files, templates, static assets |
+| `src/test/` | Unit and integration tests |
+| `docs/` | Project documentation and diagrams |
+| `.devcontainer/` | GitHub Codespaces configuration |
+| `target/` | Maven build artifacts (auto-generated) |
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `pom.xml` | Maven dependencies (Spring Boot, Spring AI, pgvector, Thymeleaf, HTMX) |
+| `docker-compose.yml` | PostgreSQL 16 + pgvector service for local/Codespaces development |
+| `Dockerfile` | Multi-stage Docker build for containerized deployment |
+| `init-db.sql` | Database initialization script (creates pgvector extension) |
+| `README.md` | Quick project overview and getting started guide |
+| `docs/CONSOLIDATED_DOCUMENTATION.md` | Complete project documentation (this file) |
+
+---
+
+## Swagger/OpenAPI Documentation
+
+The project includes comprehensive API documentation using **Swagger 3.0 (OpenAPI)** with **SpringDoc OpenAPI**.
+
+### Access Swagger UI
+
+Once the application is running, access the interactive API documentation at:
+
+- **Swagger UI**: http://localhost:8080/swagger-ui.html
+- **OpenAPI JSON**: http://localhost:8080/v3/api-docs
+- **OpenAPI YAML**: http://localhost:8080/v3/api-docs.yaml
+
+### Features
+
+✅ **Interactive API Explorer**
+- Browse all available endpoints
+- View request/response schemas
+- Try out API calls directly from the browser
+- View response examples
+
+✅ **Complete API Documentation**
+- Every endpoint is documented with:
+  - Description and purpose
+  - Required and optional parameters
+  - Request/response examples
+  - HTTP status codes and error descriptions
+  - Data models and schemas
+
+✅ **Organized by Tags**
+- Chat API
+- Document API
+- UI API (HTMX endpoints)
+
+### API Endpoints Overview
+
+#### Chat Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/chat?message=<query>` | Simple LLM chat (no RAG) |
+| GET | `/api/chat/rag?message=<query>&topK=5` | RAG-enhanced chat with citations |
+| POST | `/api/chat/converse/start` | Start new conversation |
+| POST | `/api/chat/converse` | Continue conversation |
+
+#### Document Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/documents/upload` | Upload document (PDF, TXT, DOCX) |
+| GET | `/api/documents` | List all documents |
+| DELETE | `/api/documents/{documentId}` | Delete document |
+| POST | `/api/documents/{documentId}/reindex` | Re-index document |
+| GET | `/api/documents/{documentId}/metadata` | Get document metadata |
+
+#### UI API Endpoints (HTMX)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/ui/chat/message` | Send chat message (HTML fragment response) |
+| GET | `/api/ui/chat/messages?conversationId=<id>` | Get message history |
+| POST | `/api/ui/chat/converse/start` | Start conversation (returns JSON/HTML) |
+| GET | `/api/ui/chat/conversations` | List conversations |
+| DELETE | `/api/ui/chat/conversation/{id}` | Delete conversation |
+
+### Configuration
+
+Swagger configuration is defined in:
+- `src/main/java/.../config/SwaggerConfig.java` - OpenAPI metadata configuration
+- `src/main/resources/application.properties` - Swagger UI settings
+
+Key properties:
+```properties
+springdoc.swagger-ui.enabled=true
+springdoc.api-docs.enabled=true
+springdoc.swagger-ui.try-it-out-enabled=true
+springdoc.swagger-ui.doc-expansion=list
+```
+
+### Example API Call (via Swagger UI)
+
+1. **Navigate to**: http://localhost:8080/swagger-ui.html
+2. **Find**: `/api/chat/rag` endpoint under Chat API
+3. **Click**: "Try it out" button
+4. **Enter**: 
+   - `message`: "What is the vacation policy?"
+   - `topK`: 5
+5. **Click**: "Execute"
+6. **View**: Response with answer and citations
+
+### Example cURL Command
+
+```bash
+# Simple chat (no RAG)
+curl "http://localhost:8080/api/chat?message=What%20is%20Spring%20Boot"
+
+# RAG-enhanced chat
+curl "http://localhost:8080/api/chat/rag?message=What%20is%20the%20vacation%20policy&topK=5"
+
+# Upload document
+curl -X POST http://localhost:8080/api/documents/upload \
+  -F "file=@policy.pdf"
+
+# List documents
+curl http://localhost:8080/api/documents
+
+# Start conversation
+curl -X POST http://localhost:8080/api/chat/converse/start
+```
+
+### Programmatic Access
+
+You can programmatically fetch API documentation:
+
+```bash
+# Get OpenAPI JSON specification
+curl http://localhost:8080/v3/api-docs | jq
+
+# Get OpenAPI YAML specification
+curl http://localhost:8080/v3/api-docs.yaml
+```
+
+### Integration with Tools
+
+The OpenAPI specification can be imported into:
+- **Postman** — Import `http://localhost:8080/v3/api-docs` as collection
+- **Insomnia** — Import OpenAPI spec
+- **VS Code REST Client** — Use endpoint documentation to generate requests
+- **API Gateway** — Use for API documentation and client generation
 
 ---
 

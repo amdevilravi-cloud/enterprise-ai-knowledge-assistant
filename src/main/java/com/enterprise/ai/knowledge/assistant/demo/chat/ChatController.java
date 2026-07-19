@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
  * - /api/chat/rag - RAG-enhanced chat with document retrieval and context injection
  */
 @RestController
-@RequestMapping("/api/chat")
+@RequestMapping("/api/chat/v1")
 public class ChatController {
 
     private final ChatClient chatClient;

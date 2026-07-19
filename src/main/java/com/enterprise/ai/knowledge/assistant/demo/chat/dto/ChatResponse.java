@@ -1,11 +1,16 @@
 package com.enterprise.ai.knowledge.assistant.demo.chat.dto;
 
+import lombok.Builder;
+import lombok.Data;
+
 import java.util.List;
 import java.util.Map;
 
 /**
  * Response DTO for chat endpoints with enriched RAG metadata.
  */
+@Builder
+@Data
 public class ChatResponse {
     private String answer;
     private List<Citation> citations;
