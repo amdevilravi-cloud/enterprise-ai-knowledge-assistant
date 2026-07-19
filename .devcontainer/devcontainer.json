@@ -1,46 +1,26 @@
-//{
-//  "name": "Enterprise AI Knowledge Assistant",
-//
-//  "image": "mcr.microsoft.com/devcontainers/java:1-21-bookworm",
-//
-//  "features": {
-//    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
-//  },
-//
-//  "forwardPorts": [8080, 5432],
-//
-//  "portsAttributes": {
-//    "8080": {
-//      "label": "Spring Boot"
-//    },
-//    "5432": {
-//      "label": "PostgreSQL"
-//    }
-//  },
-//
-//  "postCreateCommand": "mvn -q dependency:resolve",
-//
-//  "customizations": {
-//    "vscode": {
-//      "extensions": [
-//        "vscjava.vscode-java-pack",
-//        "vmware.vscode-spring-boot",
-//        "redhat.vscode-xml",
-//        "ms-azuretools.vscode-docker"
-//      ]
-//    }
-//  },
-//
-//  "remoteEnv": {
-//    "SPRING_PROFILES_ACTIVE": "codespace"
-//  }
-//}
 {
   "name": "Enterprise AI Knowledge Assistant",
   "image": "mcr.microsoft.com/devcontainers/java:1-21-bookworm",
 
- // "features": {
-   // "ghcr.io/devcontainers/features/docker-in-docker:2": {}
-//}
-"postCreateCommand": "./mvnw -q dependency:resolve"
+  "forwardPorts": [
+    8080,
+    5432
+  ],
+
+  "postCreateCommand": "./mvnw -q dependency:resolve",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "vmware.vscode-spring-boot",
+        "redhat.vscode-xml",
+        "ms-azuretools.vscode-docker"
+      ]
+    }
+  },
+
+  "remoteEnv": {
+    "SPRING_PROFILES_ACTIVE": "codespace"
   }
+}
