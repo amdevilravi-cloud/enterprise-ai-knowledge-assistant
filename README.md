@@ -1,3 +1,7 @@
+> 📚 **For Complete Documentation** — See [`docs/CONSOLIDATED_DOCUMENTATION.md`](./docs/CONSOLIDATED_DOCUMENTATION.md) for all project guides, quickstarts, checklists, RAG integration details, UI documentation, and architecture diagrams.
+>
+> This README provides a quick overview; detailed setup, deployment, and architectural information is centralized in the consolidated document.
+
 Enterprise AI Knowledge Assistant (Skeleton)
 
 This project is a lightweight skeleton demonstrating:
