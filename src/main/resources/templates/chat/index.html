@@ -22,7 +22,7 @@
         <main class="flex-grow-1 d-flex flex-column">
             <!-- Messages Container -->
             <div id="messageList" class="flex-grow-1 overflow-auto p-4 chat-messages"
-                 th:attr="hx-get='/api/ui/chat/messages?conversationId=' + ${conversationId}"
+                 th:attr="hx-get='/api/ui/messages?conversationId=' + ${conversationId}"
                  hx-trigger="load"
                  hx-swap="innerHTML">
                 <div class="text-center text-muted py-5">

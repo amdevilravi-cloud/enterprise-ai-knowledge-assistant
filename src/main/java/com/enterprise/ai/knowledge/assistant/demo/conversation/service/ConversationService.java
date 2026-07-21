@@ -1,6 +1,8 @@
 package com.enterprise.ai.knowledge.assistant.demo.conversation.service;
 
 import com.enterprise.ai.knowledge.assistant.demo.chat.dto.ChatResponse;
+import com.enterprise.ai.knowledge.assistant.demo.chat.dto.Citation;
+import com.enterprise.ai.knowledge.assistant.demo.chat.dto.DocumentSource;
 import com.enterprise.ai.knowledge.assistant.demo.conversation.repository.ConversationRepository;
 import com.enterprise.ai.knowledge.assistant.demo.rag.PromptBuilder;
 import com.enterprise.ai.knowledge.assistant.demo.rag.Retriever;
@@ -82,17 +84,7 @@ public class ConversationService {
 
             memoryManager.saveAssistantMessage(conversationId, answer, messageOrder + 1);
 
-            List<ChatResponse.Citation> citations = results.stream()
-                    .map(r -> new ChatResponse.Citation(
-                            r.getDocumentName(),
-                            r.getPageNumber(),
-                            r.getChunkIndex(),
-                            r.getScore(),
-                            r.getContent()
-                    ))
-                    .collect(Collectors.toList());
-
-            List<ChatResponse.DocumentSource> sourceDocuments = 
+            List<DocumentSource> sourceDocuments =
                     documentGroupingService.groupResultsByDocument(results);
 
             Map<String, Object> metadata = new HashMap<>(ragPrompt.metadata());
@@ -101,14 +93,14 @@ public class ConversationService {
                 metadata.put("multiDocMode", true);
             }
 
-            return new ChatResponse(answer, citations, !results.isEmpty(), results.size(), 
-                                   sourceDocuments, metadata);
+            return new ChatResponse(answer, !results.isEmpty(), results.size(),
+                                   sourceDocuments);
         } catch (Exception e) {
             String fallbackAnswer = chatClient.prompt()
                     .user(userMessage)
                     .call()
                     .content();
-            return new ChatResponse(fallbackAnswer, List.of(), false, 0);
+            return new ChatResponse(fallbackAnswer, false, 0, List.of());
         }
     }
 
@@ -144,28 +136,71 @@ public class ConversationService {
                     .call()
                     .content();
 
-            List<ChatResponse.Citation> citations = results.stream()
-                    .map(r -> new ChatResponse.Citation(
-                            r.getDocumentName(),
-                            r.getPageNumber(),
-                            r.getChunkIndex(),
-                            r.getScore(),
-                            r.getContent()
-                    ))
+            // Step 4: Extract sourceDocuments and citations from results
+            // Group SearchResults by documentId to build DocumentSource objects
+            List<DocumentSource> sourceDocuments = results.stream()
+                    .collect(Collectors.groupingBy(SearchResult::getDocumentId))
+                    .entrySet()
+                    .stream()
+                    .map(entry -> buildDocumentSource(entry.getKey(), entry.getValue()))
                     .collect(Collectors.toList());
 
-            return new ChatResponse(answer, citations, !results.isEmpty(), results.size());
+
+            return new ChatResponse(answer, !results.isEmpty(), results.size(), sourceDocuments);
         } catch (Exception e) {
 
             String fallbackAnswer = chatClient.prompt()
                     .user(message)
                     .call()
                     .content();
-            return new ChatResponse(fallbackAnswer, List.of(), false, 0);
+            return new ChatResponse(fallbackAnswer, false, 0, List.of());
         }
     }
 
     public Map<String, Object> getCitationDetails(String chunkHash) {
         return conversationRepository.getCitationDetails(chunkHash);
+    }
+    /**
+     * Build a DocumentSource from grouped SearchResults
+     * Converts SearchResults from the same document into a DocumentSource with citations
+     *
+     * @param documentId the document ID (grouping key)
+     * @param results list of SearchResults from the same document
+     * @return DocumentSource with populated citations
+     */
+    private DocumentSource buildDocumentSource(String documentId, List<SearchResult> results) {
+        if (results == null || results.isEmpty()) {
+            return new DocumentSource();
+        }
+
+        // Use first result to get document metadata
+        SearchResult firstResult = results.get(0);
+
+        // Convert each SearchResult to a Citation
+        List<Citation> citations = results.stream()
+                .map(result -> Citation.builder()
+                        .documentName(result.getDocumentName())
+                        .documentId(result.getDocumentId())
+                        .pageNumber(result.getPageNumber())
+                        .chunkIndex(result.getChunkIndex())
+                        .relevanceScore(result.getScore())
+                        .content(result.getContent())
+                        .chunkHash(result.getChunkHash())
+                        .documentHash(result.getDocumentHash())
+                        .embeddingModel(result.getEmbeddingModel())
+                        .embeddingDimension(result.getEmbeddingDimension())
+                        .language(result.getLanguage())
+                        .version(result.getVersion())
+                        .updatedAt(result.getUpdatedAt())
+                        .build())
+                .collect(Collectors.toList());
+
+        // Build and return DocumentSource
+        return DocumentSource.builder()
+                .documentId(documentId)
+                .documentName(firstResult.getDocumentName())
+                .citations(citations)
+                .chunkCount(results.size())
+                .build();
     }
 }

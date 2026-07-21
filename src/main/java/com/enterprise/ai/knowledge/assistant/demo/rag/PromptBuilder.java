@@ -27,7 +27,8 @@ public class PromptBuilder {
      * Build a RagPrompt from a query and search results using the default template.
      */
     public RagPrompt buildRagPrompt(String query, List<SearchResult> results) {
-        return buildRagPrompt(query, results, defaultTemplate);
+       // return buildRagPrompt(query, results, defaultTemplate);
+        return buildRagPromptWithHistory(query, results, null);
     }
 
     /**

@@ -107,9 +107,9 @@ public class PostgresConversationRepository implements ConversationRepository {
         return jdbcTemplate.query(sql, (rs, rowNum) ->
             new ChatResponse(
                 rs.getString("message"),
-                List.of(),
+
                 false,
-                0
+                0,List.of()
             ), conversationId);
     }
 

@@ -22,9 +22,9 @@ public class SearchResult {
 
 
     public SearchResult(String content, double score, Integer pageNumber, String documentName, Integer chunkIndex,
-                       String documentId, String documentHash, String chunkHash,
-                       String embeddingModel, Integer embeddingDimension, String language,
-                       Integer version, Instant updatedAt) {
+                        String documentId, String documentHash, String chunkHash,
+                        String embeddingModel, Integer embeddingDimension, String language,
+                        Integer version, Instant updatedAt) {
         this.content = content;
         this.score = score;
         this.pageNumber = pageNumber;
@@ -40,19 +40,56 @@ public class SearchResult {
         this.updatedAt = updatedAt;
     }
 
-    public String getContent() { return content; }
-    public double getScore() { return score; }
-    public Integer getPageNumber() { return pageNumber; }
-    public String getDocumentName() { return documentName; }
-    public Integer getChunkIndex() { return chunkIndex; }
-    public String getDocumentId() { return documentId; }
-    public String getDocumentHash() { return documentHash; }
-    public String getChunkHash() { return chunkHash; }
-    public String getEmbeddingModel() { return embeddingModel; }
-    public Integer getEmbeddingDimension() { return embeddingDimension; }
-    public String getLanguage() { return language; }
-    public Integer getVersion() { return version; }
-    public Instant getUpdatedAt() { return updatedAt; }
+    public String getContent() {
+        return content;
+    }
 
+    public double getScore() {
+        return score;
+    }
+
+    public Integer getPageNumber() {
+        return pageNumber;
+    }
+
+    public String getDocumentName() {
+        return documentName;
+    }
+
+    public Integer getChunkIndex() {
+        return chunkIndex;
+    }
+
+    public String getDocumentId() {
+        return documentId;
+    }
+
+    public String getDocumentHash() {
+        return documentHash;
+    }
+
+    public String getChunkHash() {
+        return chunkHash;
+    }
+
+    public String getEmbeddingModel() {
+        return embeddingModel;
+    }
+
+    public Integer getEmbeddingDimension() {
+        return embeddingDimension;
+    }
+
+    public String getLanguage() {
+        return language;
+    }
+
+    public Integer getVersion() {
+        return version;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
 }
 

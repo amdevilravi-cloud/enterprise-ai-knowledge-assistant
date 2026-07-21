@@ -1,6 +1,8 @@
 package com.enterprise.ai.knowledge.assistant.demo.rag.service;
 
 import com.enterprise.ai.knowledge.assistant.demo.chat.dto.ChatResponse;
+import com.enterprise.ai.knowledge.assistant.demo.chat.dto.Citation;
+import com.enterprise.ai.knowledge.assistant.demo.chat.dto.DocumentSource;
 import com.enterprise.ai.knowledge.assistant.demo.repository.SearchResult;
 import org.springframework.stereotype.Component;
 
@@ -12,19 +14,19 @@ import java.util.Map;
 @Component
 public class DocumentGroupingService {
 
-    public List<ChatResponse.DocumentSource> groupResultsByDocument(List<SearchResult> results) {
+    public List<DocumentSource> groupResultsByDocument(List<SearchResult> results) {
         if (results == null || results.isEmpty()) {
             return List.of();
         }
 
-        Map<String, ChatResponse.DocumentSource> docMap = new HashMap<>();
+        Map<String, DocumentSource> docMap = new HashMap<>();
 
         for (SearchResult result : results) {
             String docName = result.getDocumentName();
             String docId = result.getDocumentId();
 
-            ChatResponse.DocumentSource docSource = docMap.computeIfAbsent(docName, key -> {
-                ChatResponse.DocumentSource ds = new ChatResponse.DocumentSource();
+            DocumentSource docSource = docMap.computeIfAbsent(docName, key -> {
+                DocumentSource ds = new DocumentSource();
                 ds.setDocumentName(docName);
                 ds.setDocumentId(docId);
                 ds.setCitations(new ArrayList<>());
@@ -32,13 +34,21 @@ public class DocumentGroupingService {
                 return ds;
             });
 
-            ChatResponse.Citation citation = new ChatResponse.Citation(
-                    result.getDocumentName(),
-                    result.getPageNumber(),
-                    result.getChunkIndex(),
-                    result.getScore(),
-                    result.getContent()
-            );
+            Citation citation =  Citation.builder()
+                    .documentName(result.getDocumentName())
+                    .documentId(result.getDocumentId())
+                    .pageNumber(result.getPageNumber())
+                    .chunkIndex(result.getChunkIndex())
+                    .relevanceScore(result.getScore())
+                    .content(result.getContent())
+                    .chunkHash(result.getChunkHash())
+                    .documentHash(result.getDocumentHash())
+                    .embeddingModel(result.getEmbeddingModel())
+                    .embeddingDimension(result.getEmbeddingDimension())
+                    .language(result.getLanguage())
+                    .version(result.getVersion())
+                    .updatedAt(result.getUpdatedAt())
+                    .build();
 
             docSource.getCitations().add(citation);
             docSource.setChunkCount(docSource.getChunkCount() + 1);
@@ -47,14 +57,14 @@ public class DocumentGroupingService {
         return new ArrayList<>(docMap.values());
     }
 
-    public String buildDocumentSummary(List<ChatResponse.DocumentSource> sources) {
+    public String buildDocumentSummary(List<DocumentSource> sources) {
         if (sources == null || sources.isEmpty()) {
             return "";
         }
 
         StringBuilder summary = new StringBuilder();
         for (int i = 0; i < sources.size(); i++) {
-            ChatResponse.DocumentSource source = sources.get(i);
+            DocumentSource source = sources.get(i);
             summary.append(source.getDocumentName());
             if (i < sources.size() - 1) {
                 summary.append(", ");

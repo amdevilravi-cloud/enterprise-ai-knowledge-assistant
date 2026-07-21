@@ -89,7 +89,7 @@ public class DocumentUIController {
 
             if (isHtmxRequest(request)) {
                 model.addAttribute("documents", documents);
-              //  return "documents/list :: documents";
+                return "documents/list :: documents";
             }
 
             return ResponseEntity.ok(documents);
