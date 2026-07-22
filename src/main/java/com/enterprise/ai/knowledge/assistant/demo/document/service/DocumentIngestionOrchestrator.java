@@ -74,8 +74,8 @@ public class DocumentIngestionOrchestrator {
 
         DocumentUploadResponse response = new DocumentUploadResponse();
         response.setDocumentName(metadata.documentName());
-        response.setPages(metadata.pageCount());
-        response.setCharacters(metadata.characterCount());
+        response.setPages(metadata.pages());
+        response.setCharacters(metadata.characters());
         response.setChunks(chunkList.size());
         response.setText("");
         response.setUploadSuccess(true);
@@ -91,8 +91,9 @@ public class DocumentIngestionOrchestrator {
 
             DocumentUploadResponse response = new DocumentUploadResponse();
             response.setDocumentName(metadata.documentName());
-            response.setPages(metadata.pageCount());
-            response.setCharacters(metadata.characterCount());
+            response.setPages(metadata.pages());
+            response.setCharacters(metadata.characters());
+            response.setFileSize(metadata.fileSize());
             response.setChunks(chunkList.size());
             response.setText("");
             response.setUploadSuccess(true);

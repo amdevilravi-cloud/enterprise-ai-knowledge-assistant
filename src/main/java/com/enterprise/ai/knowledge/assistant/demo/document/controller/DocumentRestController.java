@@ -1,9 +1,11 @@
-package com.enterprise.ai.knowledge.assistant.demo.document;
+package com.enterprise.ai.knowledge.assistant.demo.document.controller;
 
+import com.enterprise.ai.knowledge.assistant.demo.document.dto.DocumentMetadata;
 import com.enterprise.ai.knowledge.assistant.demo.document.dto.DocumentUploadResponse;
 import com.enterprise.ai.knowledge.assistant.demo.document.service.DocumentUploadService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -145,7 +147,7 @@ public class DocumentRestController {
             description = "List of documents retrieved",
             content = @Content(
                 mediaType = "application/json",
-                schema = @Schema(type = "array")
+                array = @ArraySchema(schema = @Schema(implementation = DocumentMetadata.class))
             )
         ),
         @ApiResponse(
@@ -153,10 +155,10 @@ public class DocumentRestController {
             description = "Error retrieving documents"
         )
     })
-    public ResponseEntity<List<DocumentUploadResponse>> listDocuments() {
+    public ResponseEntity<List<DocumentMetadata>> listDocuments() {
         try {
             log.info("Listing all documents");
-            List<DocumentUploadResponse> documents = documentUploadService.listDocuments();
+            List<DocumentMetadata> documents = documentUploadService.listDocuments();
             return ResponseEntity.ok(documents);
         } catch (Exception e) {
             log.error("Error listing documents", e);

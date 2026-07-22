@@ -26,11 +26,12 @@ public class DocumentGroupingService {
             String docId = result.getDocumentId();
 
             DocumentSource docSource = docMap.computeIfAbsent(docName, key -> {
-                DocumentSource ds = new DocumentSource();
-                ds.setDocumentName(docName);
-                ds.setDocumentId(docId);
-                ds.setCitations(new ArrayList<>());
-                ds.setChunkCount(0);
+                DocumentSource ds = DocumentSource.builder()
+                        .documentName(docName)
+                        .documentId(docId)
+                        .citations(new ArrayList<>())
+                        .chunkCount(0)
+                        .build();
                 return ds;
             });
 

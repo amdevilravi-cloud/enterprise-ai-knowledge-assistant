@@ -1,5 +1,6 @@
 package com.enterprise.ai.knowledge.assistant.demo.repository;
 
+import com.enterprise.ai.knowledge.assistant.demo.document.dto.DocumentMetadata;
 import com.enterprise.ai.knowledge.assistant.demo.vector.entity.ChunkEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCreator;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -138,6 +140,47 @@ public class PostgresVectorRepository implements VectorRepository {
             return count != null && count > 0;
         } catch (Exception e) {
             return false;
+        }
+    }
+
+    @Override
+    public void deleteByDocumentId(String documentId) {
+        String sql = "DELETE FROM embeddings WHERE document_id = ?";
+        jdbcTemplate.update(sql, documentId);
+    }
+
+    @Override
+    public List<DocumentMetadata> listDocuments() {
+        String sql = "SELECT document_id, document_name, document_hash, COUNT(*) as chunk_count, MIN(created_at) as uploaded_at, MAX(updated_at) as indexed_at " +
+                     "FROM embeddings GROUP BY document_id, document_name, document_hash ORDER BY uploaded_at DESC";
+
+        RowMapper<DocumentMetadata> mapper = (rs, rowNum) -> {
+            String documentId = rs.getString("document_id");
+            String documentName = rs.getString("document_name");
+            String documentHash = rs.getString("document_hash");
+            int chunkCount = rs.getInt("chunk_count");
+            Timestamp uploadedAtTs = rs.getTimestamp("uploaded_at");
+            Instant uploadedAt = uploadedAtTs == null ? null : uploadedAtTs.toInstant();
+            Timestamp indexedAtTs = rs.getTimestamp("indexed_at");
+            Instant indexedAt = indexedAtTs == null ? null : indexedAtTs.toInstant();
+
+            return new DocumentMetadata(
+                    documentId, 
+                    documentName, 
+                    documentHash, 
+                    chunkCount, 
+                    0L, // fileSize - not tracked in embeddings table
+                    0, // pages - not tracked in embeddings table
+                    0, // characters - not tracked in embeddings table
+                    uploadedAt, 
+                    indexedAt
+            );
+        };
+
+        try {
+            return jdbcTemplate.query(sql, mapper);
+        } catch (Exception e) {
+            return new ArrayList<>();
         }
     }
 }

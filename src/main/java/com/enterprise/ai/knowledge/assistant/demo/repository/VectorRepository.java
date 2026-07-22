@@ -20,4 +20,10 @@ public interface VectorRepository {
 
 	/** Return true if a chunk with the provided content hash already exists. */
 	boolean existsByHash(String hash);
+
+	/** Delete all chunks associated with the given document ID. */
+	void deleteByDocumentId(String documentId);
+
+	/** List all unique document IDs and their metadata. */
+	List<com.enterprise.ai.knowledge.assistant.demo.document.dto.DocumentMetadata> listDocuments();
 }

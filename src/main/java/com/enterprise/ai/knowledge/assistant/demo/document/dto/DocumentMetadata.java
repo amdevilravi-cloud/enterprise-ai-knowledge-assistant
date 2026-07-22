@@ -6,13 +6,15 @@ import java.time.Instant;
  * Lightweight metadata captured during ingestion.
  */
 public record DocumentMetadata(
+        String documentId,
         String documentName,
-        String fileExtension,
-        String mimeType,
-        int pageCount,
-        int characterCount,
-        String language,
-        Instant extractedAt
+        String documentHash,
+        int chunkCount,
+        Long fileSize,
+        int pages,
+        int characters,
+        Instant uploadedAt,
+        Instant indexedAt
 ) {
 }
 

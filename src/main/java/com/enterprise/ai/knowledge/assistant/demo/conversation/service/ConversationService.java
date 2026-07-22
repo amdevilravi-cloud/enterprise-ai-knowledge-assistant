@@ -64,7 +64,7 @@ public class ConversationService {
 
             List<SearchResult> results;
             if (hybridRetriever.isEnabled()) {
-                results = hybridRetriever.retrieve(userMessage, 3, history);
+                results = hybridRetriever.retrieveAndRerank(userMessage, 20, 3);
             } else {
                 results = retriever.retrieveAndRerank(userMessage, 20, 3);
             }
@@ -75,7 +75,8 @@ public class ConversationService {
             } else {
                 ragPrompt = promptBuilder.buildRagPromptWithHistory(userMessage, results, history);
             }
-
+            System.out.println("System Prompt: " + ragPrompt.systemPrompt());
+            System.out.println("RAG Prompt: " + ragPrompt.userPrompt());
             String answer = chatClient.prompt()
                     .system(ragPrompt.systemPrompt())
                     .user(ragPrompt.userPrompt())
@@ -93,15 +94,24 @@ public class ConversationService {
                 metadata.put("multiDocMode", true);
             }
 
-            return new ChatResponse(answer, !results.isEmpty(), results.size(),
-                                   sourceDocuments);
-        } catch (Exception e) {
-            String fallbackAnswer = chatClient.prompt()
-                    .user(userMessage)
-                    .call()
-                    .content();
-            return new ChatResponse(fallbackAnswer, false, 0, List.of());
-        }
+            return ChatResponse.builder()
+                    .answer(answer)
+                    .isFromContext(!results.isEmpty())
+                    .retrievalCount(results.size())
+                    .sourceDocuments(sourceDocuments)
+                    .build();
+         } catch (Exception e) {
+             String fallbackAnswer = chatClient.prompt()
+                     .user(userMessage)
+                     .call()
+                     .content();
+             return ChatResponse.builder()
+                     .answer(fallbackAnswer)
+                     .isFromContext(false)
+                     .retrievalCount(0)
+                     .sourceDocuments(List.of())
+                     .build();
+         }
     }
 
     public ChatResponse chat(UUID conversationId, String userMessage) {
@@ -122,6 +132,10 @@ public class ConversationService {
 
     public void deleteConversation(UUID conversationId) {
         conversationRepository.deleteConversation(conversationId);
+    }
+
+    public List<Map<String, Object>> searchConversations(String query) {
+        return conversationRepository.searchConversations(query);
     }
 
     public ChatResponse ragChat(String message, Integer topK) {
@@ -146,14 +160,24 @@ public class ConversationService {
                     .collect(Collectors.toList());
 
 
-            return new ChatResponse(answer, !results.isEmpty(), results.size(), sourceDocuments);
+            return ChatResponse.builder()
+                    .answer(answer)
+                    .isFromContext(!results.isEmpty())
+                    .retrievalCount(results.size())
+                    .sourceDocuments(sourceDocuments)
+                    .build();
         } catch (Exception e) {
 
             String fallbackAnswer = chatClient.prompt()
                     .user(message)
                     .call()
                     .content();
-            return new ChatResponse(fallbackAnswer, false, 0, List.of());
+            return ChatResponse.builder()
+                    .answer(fallbackAnswer)
+                    .isFromContext(false)
+                    .retrievalCount(0)
+                    .sourceDocuments(List.of())
+                    .build();
         }
     }
 

@@ -1,6 +1,8 @@
 package com.enterprise.ai.knowledge.assistant.demo.document.service;
 
+import com.enterprise.ai.knowledge.assistant.demo.document.dto.DocumentMetadata;
 import com.enterprise.ai.knowledge.assistant.demo.document.dto.DocumentUploadResponse;
+import com.enterprise.ai.knowledge.assistant.demo.repository.VectorRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -17,9 +19,11 @@ import java.util.*;
 public class DocumentUploadService {
 
 	private final DocumentIngestionOrchestrator ingestionOrchestrator;
+	private final VectorRepository vectorRepository;
 
-	public DocumentUploadService(DocumentIngestionOrchestrator ingestionOrchestrator) {
+	public DocumentUploadService(DocumentIngestionOrchestrator ingestionOrchestrator, VectorRepository vectorRepository) {
 		this.ingestionOrchestrator = ingestionOrchestrator;
+		this.vectorRepository = vectorRepository;
 	}
 
 	private static final Path DEFAULT_UPLOAD_DIR = Paths.get(System.getProperty("java.io.tmpdir"), "enterprise-ai-uploads");
@@ -69,15 +73,14 @@ public class DocumentUploadService {
 		}
 	}
 
-	public List<DocumentUploadResponse> listDocuments() {
-		log.info("Listing documents");
-		// Return mock data for now - in production, query from database
-		return Collections.emptyList();
+	public List<DocumentMetadata> listDocuments() {
+		log.info("Listing documents from database");
+		return vectorRepository.listDocuments();
 	}
 
 	public void deleteDocument(String id) {
 		log.info("Deleting document: {}", id);
-		// TODO: Implement document deletion from database
+		vectorRepository.deleteByDocumentId(id);
 	}
 
 	public void reindexDocument(String id) {

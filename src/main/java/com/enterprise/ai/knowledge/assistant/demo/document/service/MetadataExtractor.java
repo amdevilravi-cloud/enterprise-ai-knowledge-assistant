@@ -18,13 +18,15 @@ public class MetadataExtractor {
         }
 
         return new DocumentMetadata(
+                null, // documentId - generated later
                 documentName,
-                extension,
-                parsedDocument == null ? null : parsedDocument.mimeType(),
+                null, // documentHash - generated later
+                0, // chunkCount - set during ingestion
+                0L, // fileSize - not available yet
                 parsedDocument == null ? 0 : parsedDocument.pageCount(),
                 parsedDocument == null || parsedDocument.text() == null ? 0 : parsedDocument.text().length(),
-                detectLanguage(parsedDocument == null ? null : parsedDocument.text()),
-                Instant.now()
+                Instant.now(), // uploadedAt
+                null // indexedAt - set during indexing
         );
     }
 

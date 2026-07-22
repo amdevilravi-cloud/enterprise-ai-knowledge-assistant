@@ -20,5 +20,6 @@ public interface ConversationRepository {
     List<Map<String, Object>> getAllConversations();
     void deleteConversation(UUID conversationId);
     Map<String, Object> getCitationDetails(String chunkHash);
+    List<Map<String, Object>> searchConversations(String query);
 }
 

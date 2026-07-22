@@ -19,11 +19,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
  * Chat REST API Controller with Swagger Documentation
@@ -34,7 +36,7 @@ import java.util.stream.Collectors;
  * - Conversation management
  */
 @RestController
-@RequestMapping("/api/chat/v1")
+@RequestMapping("/api/chat")
 @Slf4j
 @Tag(
         name = "Chat API",
@@ -189,7 +191,12 @@ public class ChatRestController {
                     .collect(Collectors.toList());
 
 
-            return new ChatResponse(answer, !results.isEmpty(), results.size(), sourceDocuments);
+            return ChatResponse.builder()
+                    .answer(answer)
+                    .isFromContext(!results.isEmpty())
+                    .retrievalCount(results.size())
+                    .sourceDocuments(sourceDocuments)
+                    .build();
         } catch (Exception e) {
             log.error("Error processing RAG chat", e);
             // Fallback to simple chat on error
@@ -332,6 +339,82 @@ public class ChatRestController {
                                  @RequestBody ConversationRequest request) {
         int historyDepth = request.getHistoryDepth() > 0 ? request.getHistoryDepth() : 5;
         return conversationService.chat(conversationId, request.getMessage(), historyDepth);
+    }
+
+    /**
+     * Get all conversations
+     */
+    @GetMapping("/conversations")
+    @Operation(
+            summary = "Get All Conversations",
+            description = "Retrieve list of all conversations with metadata",
+            tags = {"Chat API"}
+    )
+    public List<java.util.Map<String, Object>> getAllConversations() {
+        return conversationService.getAllConversations();
+    }
+
+    /**
+     * Delete a conversation
+     */
+    @DeleteMapping("/conversations/{conversationId}")
+    @Operation(
+            summary = "Delete Conversation",
+            description = "Delete a conversation and all its messages",
+            tags = {"Chat API"}
+    )
+    public void deleteConversation(@PathVariable UUID conversationId) {
+        conversationService.deleteConversation(conversationId);
+    }
+
+    /**
+     * Search conversations
+     */
+    @GetMapping("/conversations/search")
+    @Operation(
+            summary = "Search Conversations",
+            description = "Search conversations by title or message content",
+            tags = {"Chat API"}
+    )
+    public List<java.util.Map<String, Object>> searchConversations(
+            @RequestParam String query) {
+        return conversationService.searchConversations(query);
+    }
+
+    /**
+     * Streaming chat endpoint using Server-Sent Events (SSE)
+     */
+    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(
+            summary = "Streaming Chat",
+            description = "Send a query and receive the response as a stream of text chunks",
+            tags = {"Chat API"}
+    )
+    public SseEmitter streamChat(
+            @Parameter(description = "User query", required = true)
+            @RequestParam String message) {
+        
+        SseEmitter emitter = new SseEmitter(30000L); // 30 second timeout
+        
+        // Run streaming in a separate thread
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            try {
+                String answer = chatClient.prompt()
+                        .user(message)
+                        .call()
+                        .content();
+                
+                // Send the complete answer as a single chunk for now
+                // In a full implementation, you'd stream token by token
+                emitter.send(SseEmitter.event().data(answer));
+                emitter.complete();
+            } catch (Exception e) {
+                log.error("Error in streaming chat", e);
+                emitter.completeWithError(e);
+            }
+        });
+        
+        return emitter;
     }
 }
 

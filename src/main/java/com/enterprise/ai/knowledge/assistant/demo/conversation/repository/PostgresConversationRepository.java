@@ -38,6 +38,21 @@ public class PostgresConversationRepository implements ConversationRepository {
         jdbcTemplate.execute(sql);
     }
 
+    @PostConstruct
+    public void ensureConversationMessagesTable(){
+        String sql = "CREATE TABLE IF NOT EXISTS conversation_messages (" +
+                "id UUID PRIMARY KEY, " +
+                "conversation_id UUID, " +
+                "message_order INT, " +
+                "role TEXT, " +
+                "message TEXT, " +
+                "created_at TIMESTAMP, " +
+                "metadata JSONB" +
+                ")";
+
+        jdbcTemplate.execute(sql);
+
+    }
     @Override
     public UUID createConversation(String title) {
         UUID id = UUID.randomUUID();
@@ -71,7 +86,7 @@ public class PostgresConversationRepository implements ConversationRepository {
         Instant now = message.getCreatedAt() == null ? Instant.now() : message.getCreatedAt();
 
         String sql = "INSERT INTO conversation_messages (id, conversation_id, message_order, role, message, created_at, metadata) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?)";
+                     "VALUES (?, ?, ?, ?, ?, ?, ?::jsonb)";
 
         jdbcTemplate.update(sql,
             id,
@@ -105,12 +120,12 @@ public class PostgresConversationRepository implements ConversationRepository {
         String sql = "SELECT id, conversation_id, message_order, role, message, created_at FROM conversation_messages " +
                      "WHERE conversation_id = ? ORDER BY message_order ASC";
         return jdbcTemplate.query(sql, (rs, rowNum) ->
-            new ChatResponse(
-                rs.getString("message"),
-
-                false,
-                0,List.of()
-            ), conversationId);
+            ChatResponse.builder()
+                .answer(rs.getString("message"))
+                .isFromContext(false)
+                .retrievalCount(0)
+                .sourceDocuments(List.of())
+                .build(), conversationId);
     }
 
     @Override
@@ -153,6 +168,35 @@ public class PostgresConversationRepository implements ConversationRepository {
         } catch (Exception e) {
             return new HashMap<>();
         }
+    }
+
+    @Override
+    public List<Map<String, Object>> searchConversations(String query) {
+        String sql = "SELECT c.id, c.title, c.created_at, " +
+                     "(SELECT MAX(created_at) FROM conversation_messages WHERE conversation_id = c.id) as last_activity, " +
+                     "(SELECT COUNT(*) FROM conversation_messages WHERE conversation_id = c.id) as message_count " +
+                     "FROM conversations c " +
+                     "WHERE c.title ILIKE ? OR EXISTS (" +
+                     "  SELECT 1 FROM conversation_messages cm " +
+                     "  WHERE cm.conversation_id = c.id AND cm.message ILIKE ?" +
+                     ") ORDER BY created_at DESC";
+        
+        String searchPattern = "%" + query + "%";
+        return jdbcTemplate.query(sql, (rs, rowNum) -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", rs.getObject("id"));
+            map.put("title", rs.getString("title"));
+            Timestamp createdAt = rs.getTimestamp("created_at");
+            if (createdAt != null) {
+                map.put("createdAt", createdAt.toInstant());
+            }
+            Timestamp lastActivity = rs.getTimestamp("last_activity");
+            if (lastActivity != null) {
+                map.put("lastActivity", lastActivity.toInstant());
+            }
+            map.put("messageCount", rs.getInt("message_count"));
+            return map;
+        }, searchPattern, searchPattern);
     }
 
     // ...existing code...
