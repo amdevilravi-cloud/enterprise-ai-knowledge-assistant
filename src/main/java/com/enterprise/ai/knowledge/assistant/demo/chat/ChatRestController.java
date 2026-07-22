@@ -22,6 +22,7 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -406,10 +407,15 @@ public class ChatRestController {
                 
                 // Send the complete answer as a single chunk for now
                 // In a full implementation, you'd stream token by token
-                emitter.send(SseEmitter.event().data(answer));
+                emitter.send(SseEmitter.event().data(answer).name("message"));
                 emitter.complete();
             } catch (Exception e) {
                 log.error("Error in streaming chat", e);
+                try {
+                    emitter.send(SseEmitter.event().data("Error: " + e.getMessage()).name("error"));
+                } catch (IOException ioException) {
+                    log.error("Error sending error event", ioException);
+                }
                 emitter.completeWithError(e);
             }
         });
